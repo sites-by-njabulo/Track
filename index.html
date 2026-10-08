@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Track</title>
+<meta name="description" content="One screen that says what to do next. Daily operating system for sitesbynjabulo.">
+<meta name="theme-color" content="#f4f4f6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Track">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+// Theme is applied here, in <head>, before the body paints, so a dark-mode
+// user never sees a white flash. "system" (the default) follows the device.
+(function () {
+  try {
+    var t = localStorage.getItem("track_theme");
+    var dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (dark) document.documentElement.setAttribute("data-theme", "dark");
+  } catch (e) {}
+})();
+</script>
+</head>
+<body>
+
+<!-- ===== Splash ===== -->
+<div id="splash-view" class="splash-view">
+  <div class="splash-inner">
+    <img class="splash-mark" src="icons/logo-mark.png" alt="" width="132" height="107">
+    <h1 class="splash-word">Track</h1>
+    <div class="splash-bar" aria-hidden="true"><span></span></div>
+  </div>
+</div>
+
+<!-- ===== Lock view ===== -->
+<div id="lock-view" class="lock-view hidden">
+  <div class="lock-card" id="lock-card">
+    <div class="lock-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="10" width="16" height="10" rx="2.5"/>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+      </svg>
+    </div>
+    <h1 class="lock-title">Track</h1>
+    <p class="lock-sub">Enter your PIN</p>
+
+    <div class="pin-dots" id="pin-dots">
+      <span class="pin-dot"></span><span class="pin-dot"></span>
+      <span class="pin-dot"></span><span class="pin-dot"></span>
+    </div>
+
+    <div class="pin-keypad" id="pin-keypad">
+      <button class="pin-key" data-key="1">1</button>
+      <button class="pin-key" data-key="2">2</button>
+      <button class="pin-key" data-key="3">3</button>
+      <button class="pin-key" data-key="4">4</button>
+      <button class="pin-key" data-key="5">5</button>
+      <button class="pin-key" data-key="6">6</button>
+      <button class="pin-key" data-key="7">7</button>
+      <button class="pin-key" data-key="8">8</button>
+      <button class="pin-key" data-key="9">9</button>
+      <span class="pin-key pin-key-empty"></span>
+      <button class="pin-key" data-key="0">0</button>
+      <button class="pin-key pin-key-plain" id="pin-delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 5H9l-6 7 6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1Z"/><path d="m16 9-5 6M11 9l5 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== App view ===== -->
+<div id="app-view" class="app-shell hidden">
+
+  <aside class="sidebar">
+    <div class="workspace">
+      <span class="workspace-mark">T</span>
+      <span class="workspace-text">
+        <strong>Track</strong>
+        <small>sitesbynjabulo</small>
+      </span>
+    </div>
+
+    <nav id="sidebar-nav" class="sidebar-nav"></nav>
+
+    <div class="sidebar-foot">
+      <div class="sync-status tone-muted" data-sync-status><span class="sync-dot"></span><span>Starting</span></div>
+      <div class="user-row">
+        <span class="avatar">N</span>
+        <span class="user-text">
+          <strong>Njabulo</strong>
+          <small id="sidebar-streak">Day one</small>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main-content">
+    <section class="page" data-page="today"    id="page-today"></section>
+    <section class="page" data-page="tasks"    id="page-tasks"></section>
+    <section class="page" data-page="pipeline" id="page-pipeline"></section>
+    <section class="page" data-page="content"  id="page-content"></section>
+    <section class="page" data-page="review"   id="page-review"></section>
+    <section class="page" data-page="settings" id="page-settings"></section>
+  </main>
+
+  <nav id="mobile-nav" class="mobile-nav"></nav>
+</div>
+
+<!-- ===== Overlays ===== -->
+<div id="scrim" class="scrim"></div>
+
+<div id="more-sheet" class="more-sheet">
+  <div class="sheet-grabber"></div>
+  <div id="more-sheet-list" class="more-sheet-list"></div>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-head">
+    <h2 id="modal-title">Edit</h2>
+    <button id="modal-close" class="icon-btn" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="modal-fields" class="modal-fields"></div>
+  <div class="modal-foot">
+    <button id="modal-delete" class="btn btn-danger-ghost hidden">Delete</button>
+    <div class="modal-foot-right">
+      <button id="modal-cancel" class="btn btn-ghost">Cancel</button>
+      <button id="modal-save" class="btn btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="sheet" class="sheet" role="dialog" aria-modal="true">
+  <button id="sheet-close" class="icon-btn sheet-close" aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="sheet-body"></div>
+</div>
+
+<div id="confirm" class="confirm" role="alertdialog" aria-modal="true">
+  <p id="confirm-text">Are you sure?</p>
+  <div class="confirm-actions">
+    <button id="confirm-no" class="btn btn-ghost">Cancel</button>
+    <button id="confirm-yes" class="btn btn-primary">Yes</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- Supabase client. If this fails to load (offline, CDN blocked) the app runs
+     on localStorage only rather than breaking. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<!-- Classic scripts in a fixed order, deliberately NOT ES modules: type="module"
+     fails on file:// and changes execution ordering. ORDER MATTERS. -->
+<script src="js/config.js"></script>
+<script src="js/verses.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/derive.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/content.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/today.js"></script>
+<script src="js/checkin.js"></script>
+<script src="js/review.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/boot.js"></script>
+
+</body>
+</html>
