@@ -121,7 +121,7 @@ function buildSeed(opts) {
     row({ item: 'Rode wireless mic', price: 180, hold_until: shift(t, -5), status: 'dropped', notes: 'The earbuds were fine on camera.' }, 35)
   ];
 
-  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 5 }, 10, stableId('settings'))];
+  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4 }, 10, stableId('settings'))];
 
   return {
     track_tasks: tasks, track_days: days, track_goals: goals, track_goal_entries: goal_entries,

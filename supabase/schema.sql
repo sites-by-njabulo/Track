@@ -150,7 +150,7 @@ create table if not exists public.settings (
   target_videos integer not null default 2,
   target_comm integer not null default 75,
   screen_cap integer not null default 70,
-  target_blogs integer not null default 5,
+  target_blogs integer not null default 4,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz

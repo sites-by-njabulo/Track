@@ -90,7 +90,7 @@ const SETTINGS_DEFAULTS = {
   target_videos: 2,
   target_comm: 75,
   screen_cap: 70,      // Instagram only, not the whole phone: an hour of DMs and posting plus ten
-  target_blogs: 5
+  target_blogs: 4
 };
 
 
