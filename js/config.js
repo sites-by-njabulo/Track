@@ -41,7 +41,9 @@ const SETTINGS_DEFAULTS = {
   goal_amount: 5000,
   goal_start: null,
   goal_end: null,
-  focus_formats: [],
+  // Videos to post per week, by format. Two a day is the stated target, so
+  // the default adds up to fourteen. Edited on the Settings page.
+  weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 },
   default_deal_value: 1500
 };
 
@@ -86,19 +88,16 @@ const OPEN_STAGES = ["replied", "call", "proposal"];
 const STAGE_DATE = { replied: "replied_date", call: "call_date", proposal: "proposal_date", won: "won_date", lost: "lost_date" };
 
 const CONTENT_STAGES = [
-  { value: "idea",     label: "Idea",     tone: "muted" },
   { value: "scripted", label: "Scripted", tone: "info" },
   { value: "filmed",   label: "Filmed",   tone: "warn" },
   { value: "edited",   label: "Edited",   tone: "warn" },
   { value: "posted",   label: "Posted",   tone: "good" }
 ];
 // What to do next with a video, derived from its stage. Never stored.
-const NEXT_VERB  = { idea: "Script", scripted: "Film", filmed: "Edit", edited: "Post" };
-const NEXT_STAGE = { idea: "scripted", scripted: "filmed", filmed: "edited", edited: "posted" };
-// Stages that count as "started but not finished". Above CONTENT_QUEUE_CAP of
-// these, idea capture goes soft-locked.
-const QUEUE_STAGES = ["scripted", "filmed", "edited"];
-const CONTENT_QUEUE_CAP = 10;
+const NEXT_VERB  = { scripted: "Film", filmed: "Edit", edited: "Post" };
+const NEXT_STAGE = { scripted: "filmed", filmed: "edited", edited: "posted" };
+// A format with nothing in the pipeline still has a next action: script one.
+const FIRST_VERB = "Script";
 
 const CONTENT_FORMATS = [
   { value: "story",     label: "Story" },
@@ -132,6 +131,13 @@ const HOLD_STATUSES = [
 ];
 const HOLD_DAYS = 30;
 
+const EXERCISE_UNITS = [
+  { value: "reps", label: "reps",    steps: [10, 25] },
+  { value: "min",  label: "minutes", steps: [5, 10] },
+  { value: "sets", label: "sets",    steps: [1, 2] },
+  { value: "km",   label: "km",      steps: [1, 2] }
+];
+
 const TOP_LIMIT = 3;
 
 
@@ -150,6 +156,7 @@ const ICONS = {
   pipeline: svg('<path d="M3 4h18l-7 8v6l-4 2v-8L3 4Z"/>'),
   content:  svg('<path d="m10 8 6 4-6 4V8Z"/><rect x="2" y="4" width="20" height="16" rx="2.5"/>'),
   review:   svg('<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>'),
+  exercise: svg('<path d="M6.5 6.5h11M6.5 17.5h11"/><path d="M4 9v6M20 9v6M2 10.5v3M22 10.5v3"/><path d="M6.5 6.5v11M17.5 6.5v11"/>'),
   settings: svg('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/>'),
 
   plus:     svg('<path d="M12 5v14M5 12h14"/>', 2),
@@ -185,5 +192,7 @@ const ICONS = {
   upload:   svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>'),
   cloud:    svg('<path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 4.3 12.3 3.5 3.5 0 0 0 6 19h11.5Z"/>'),
   inbox:    svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1Z"/>'),
-  zap:      svg('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>')
+  zap:      svg('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>'),
+  chevronDown: svg('<path d="m6 9 6 6 6-6"/>', 2),
+  search:   svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')
 };

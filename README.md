@@ -1,7 +1,8 @@
 # Track
 
 One screen that says what to do next. A personal daily operating system:
-Today, Tasks, Pipeline, Content, Review, Settings.
+Today, Tasks, Pipeline, Content, Exercise, Review, Settings. Looks like
+Todoist, in black and white.
 
 ## Run it
 
@@ -33,7 +34,9 @@ Import if you ever need to move data by hand.
 - Morning: Today opens. If last night was not closed, close it first (30
   seconds). Your Top 3 are already chosen. Press play on one.
 - During the day: tap +1 or +5 as DMs go out. The line under the counter tells
-  you what DMs have been worth over the last 30 days.
+  you what DMs have been worth over the last 30 days. Content shows which
+  kind of video is behind this week and what to do with it next. Exercise
+  counts each exercise up to its target.
 - Night: Close the day. Numbers, screen time, 1% better, tomorrow's three.
 
 ## Files

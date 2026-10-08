@@ -85,7 +85,7 @@ create table if not exists public.content (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
   format text not null default 'other',    -- story|teach|proof|dayinlife|reaction|other
-  stage text not null default 'idea',      -- idea|scripted|filmed|edited|posted
+  stage text not null default 'scripted',  -- scripted|filmed|edited|posted
   link text not null default '',
   posted_date date,
   blog_date date,
@@ -143,7 +143,35 @@ create table if not exists public.holds (
 
 
 -- ===========================================================
--- 6. SETTINGS (singleton, id = stableId("settings"))
+-- 6. EXERCISES + LOGS
+-- ===========================================================
+-- exercise_logs has a natural key (date, exercise_id); the client derives the
+-- uuid from it (exLogId in js/sync.js) so both devices write the same row.
+create table if not exists public.exercises (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  target numeric(10,2) not null default 0,
+  unit text not null default 'reps',      -- reps|min|sets|km
+  sort integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create table if not exists public.exercise_logs (
+  id uuid primary key default gen_random_uuid(),
+  date date,
+  exercise_id uuid,
+  amount numeric(10,2) not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create unique index if not exists exercise_logs_key on public.exercise_logs (date, exercise_id) where deleted_at is null;
+
+
+-- ===========================================================
+-- 7. SETTINGS (singleton, id = stableId("settings"))
 -- ===========================================================
 create table if not exists public.settings (
   id uuid primary key default gen_random_uuid(),
@@ -155,7 +183,7 @@ create table if not exists public.settings (
   goal_amount numeric(12,2) not null default 5000,
   goal_start date,
   goal_end date,
-  focus_formats jsonb not null default '[]'::jsonb,
+  weekly_mix jsonb not null default '{}'::jsonb,   -- { "teach": 6, "proof": 4, ... } per week
   default_deal_value numeric(12,2) not null default 1500,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -176,7 +204,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks','leads','content','days','holds','settings'] loop
+  foreach t in array array['tasks','leads','content','days','holds','exercises','exercise_logs','settings'] loop
 
     execute format('drop trigger if exists reject_stale_write on public.%I', t);
     execute format('create trigger reject_stale_write before update on public.%I

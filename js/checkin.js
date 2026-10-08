@@ -76,7 +76,7 @@ function checkinHtml() {
         reviewLine("Videos posted", videos + " of " + num(s.target_videos), videos >= num(s.target_videos)) +
         reviewLine("Communication practice", minutesLabel(d.comm_minutes) + " of " + minutesLabel(s.target_comm), num(d.comm_minutes) >= num(s.target_comm)) +
         reviewLine("Time with God before the phone", d.god_first ? "Yes" : "No", !!d.god_first) +
-        reviewLine("Exercise", d.exercise ? "Yes" : "No", !!d.exercise) +
+        reviewLine("Exercise", (function () { const st = exerciseStatus(checkin.day); return st ? st.done + " of " + st.total : (d.exercise ? "Yes" : "No"); })(), exerciseDoneOn(checkin.day)) +
         reviewLine("Blog posts this week", blogsWk + " of " + num(s.target_blogs), blogsWk >= num(s.target_blogs)) +
       "</ul>" +
       (under

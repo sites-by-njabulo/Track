@@ -25,7 +25,7 @@ const TABLES = {
     replied_date: null, call_date: null, proposal_date: null, won_date: null, lost_date: null
   }),
   content: () => ({
-    title: "", format: "other", stage: "idea", link: "", posted_date: null, blog_date: null, notes: ""
+    title: "", format: "other", stage: "scripted", link: "", posted_date: null, blog_date: null, notes: ""
   }),
   days: () => ({
     date: null, dms_sent: 0, comm_minutes: 0, god_first: false, exercise: false,
@@ -33,7 +33,9 @@ const TABLES = {
     better: null, journal: "", focus_task_id: null, focus_started_at: null, focus_log: []
   }),
   holds: () => ({ item: "", price: 0, hold_until: null, status: "holding", notes: "" }),
-  settings: () => Object.assign({}, SETTINGS_DEFAULTS, { focus_formats: [] })
+  exercises: () => ({ name: "", target: 0, unit: "reps", sort: 0, active: true }),
+  exercise_logs: () => ({ date: null, exercise_id: null, amount: 0 }),
+  settings: () => Object.assign({}, SETTINGS_DEFAULTS, { weekly_mix: Object.assign({}, SETTINGS_DEFAULTS.weekly_mix) })
 };
 const TABLE_NAMES = Object.keys(TABLES);
 
@@ -99,6 +101,7 @@ function stableId(seed) {
          "-8" + hex.slice(17, 20) + "-" + hex.slice(20, 32);
 }
 function dayId(key) { return stableId("day:" + key); }
+function exLogId(key, exerciseId) { return stableId("ex:" + key + ":" + exerciseId); }
 const SETTINGS_ID = stableId("settings");
 
 // Boot: localStorage first, synchronously. db[t] holds LIVE rows only.

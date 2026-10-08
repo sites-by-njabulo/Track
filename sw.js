@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   "./js/ui.js",
   "./js/tasks.js",
   "./js/content.js",
+  "./js/exercise.js",
   "./js/pipeline.js",
   "./js/today.js",
   "./js/checkin.js",

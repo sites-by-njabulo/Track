@@ -21,7 +21,7 @@ function settingsField(key, label, type, value, hint, extra) {
 function renderSettings() {
   const s = S();
   const theme = themeSetting();
-  const focus = s.focus_formats || [];
+  const mix = s.weekly_mix || {};
   const w = goalWindow();
   const configured = supabaseConfigured();
   const sync = syncLabel();
@@ -31,7 +31,7 @@ function renderSettings() {
     '<div class="col settings-col">' +
 
     '<section class="panel"><div class="panel-head"><h2>Theme</h2></div>' +
-      segmented("theme-seg", [{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "Device" }], theme) +
+      '<div class="theme-wrap">' + segmented("theme-seg", [{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "Device" }], theme) + "</div>" +
       '<p class="panel-note">Per device. Your phone and laptop can differ.</p>' +
     "</section>" +
 
@@ -57,11 +57,12 @@ function renderSettings() {
       '<div class="inline-actions"><button class="btn btn-primary" id="save-goal">Save goal</button></div>' +
     "</section>" +
 
-    '<section class="panel"><div class="panel-head"><h2>Focus formats</h2><span class="panel-meta">up to 2</span></div>' +
-      '<div class="chip-row chip-wrap">' + CONTENT_FORMATS.map(function (f) {
-        return '<button class="chip' + (focus.indexOf(f.value) !== -1 ? " active" : "") + '" data-format="' + f.value + '">' + escapeHtml(f.label) + "</button>";
+    '<section class="panel"><div class="panel-head"><h2>Weekly video mix</h2><span class="panel-meta">' + weekTargetTotal() + " a week</span></div>" +
+      '<div class="inline-fields">' + CONTENT_FORMATS.map(function (f) {
+        return settingsField("mix_" + f.value, f.label, "number", num(mix[f.value]) || 0, null, { half: true });
       }).join("") + "</div>" +
-      '<p class="panel-note">The Content page sorts these first and shows how many of each you posted this month. Pick two and stop asking the question.</p>' +
+      '<div class="inline-actions"><button class="btn btn-primary" id="save-mix">Save mix</button></div>' +
+      '<p class="panel-note">How many of each kind to post per week. Zero hides a format. The Content page and the Today card are built from this, so the question of what kind of video to make is answered here, once.</p>' +
     "</section>" +
 
     '<section class="panel"><div class="panel-head"><h2>PIN</h2>' + (pinIsDefault() ? '<span class="pill tone-warn">Still 0000</span>' : "") + "</div>" +
@@ -138,17 +139,15 @@ function wireSettings() {
     toast("Goal saved");
   });
 
-  page.querySelectorAll("[data-format]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      const f = b.dataset.format;
-      const cur = (S().focus_formats || []).slice();
-      const i = cur.indexOf(f);
-      if (i !== -1) cur.splice(i, 1);
-      else if (cur.length >= 2) { toast("Two formats. Drop one first."); return; }
-      else cur.push(f);
-      saveSettings({ focus_formats: cur });
-      renderSettings();
+  page.querySelector("#save-mix").addEventListener("click", function () {
+    const mix = {};
+    CONTENT_FORMATS.forEach(function (f) {
+      const n = Math.max(0, Math.round(readSettingNumber("mix_" + f.value)));
+      if (n) mix[f.value] = n;
     });
+    saveSettings({ weekly_mix: mix });
+    toast("Mix saved: " + weekTargetTotal() + " videos a week");
+    renderSettings();
   });
 
   page.querySelector("#save-pin").addEventListener("click", function () {

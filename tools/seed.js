@@ -72,7 +72,7 @@ function buildSeed(opts) {
     row({ title: 'Geff site before and after', format: 'proof', stage: 'filmed', link: '', notes: '' }, 3),
     row({ title: 'Why your Google Business Profile is invisible', format: 'teach', stage: 'posted', posted_date: t, blog_date: null }, 7),
     row({ title: 'A school day plus 30 cold DMs', format: 'dayinlife', stage: 'posted', posted_date: shift(t, -1), blog_date: shift(t, -1) }, 8),
-    row({ title: 'Reacting to a R500 website', format: 'reaction', stage: 'idea' }, 1),
+    row({ title: 'Reacting to a $100 website', format: 'reaction', stage: 'scripted' }, 1),
     row({ title: 'What a $1,500 website actually includes', format: 'teach', stage: 'scripted' }, 5),
     row({ title: 'The DM that got a reply in 4 minutes', format: 'proof', stage: 'scripted' }, 9),
     row({ title: 'Client call: what they ask first', format: 'teach', stage: 'posted', posted_date: shift(t, -3), blog_date: shift(t, -2) }, 12),
@@ -112,11 +112,28 @@ function buildSeed(opts) {
 
   const settings = [row({
     target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 60, target_blogs: 5,
-    goal_amount: 5000, goal_start: null, goal_end: null, focus_formats: ['teach', 'proof'], default_deal_value: 1500
+    goal_amount: 5000, goal_start: null, goal_end: null, weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }, default_deal_value: 1500
   }, 10, stableId('settings'))];
 
+  const exercises = [
+    row({ name: 'Push-ups', target: 100, unit: 'reps', sort: 0, active: true }, 20, stableId('seed:ex1')),
+    row({ name: 'Curls', target: 50, unit: 'reps', sort: 1, active: true }, 20, stableId('seed:ex2')),
+    row({ name: 'Run', target: 20, unit: 'min', sort: 2, active: true }, 20, stableId('seed:ex3')),
+    row({ name: 'Plank', target: 3, unit: 'sets', sort: 3, active: true }, 20, stableId('seed:ex4'))
+  ];
+  const exercise_logs = [];
+  for (let i = 6; i >= 0; i--) {
+    const k = shift(t, -i);
+    exercises.forEach(function (e, n) {
+      const full = (i + n) % 3 !== 0;
+      const amount = i === 0 ? (n < 2 ? e.target : Math.floor(e.target / 2)) : (full ? e.target : Math.floor(e.target * 0.6));
+      exercise_logs.push(row({ date: k, exercise_id: e.id, amount: amount }, i, stableId('ex:' + k + ':' + e.id)));
+    });
+  }
+
   return {
-    track_tasks: tasks, track_leads: leads, track_content: content, track_days: days, track_holds: holds, track_settings: settings
+    track_tasks: tasks, track_leads: leads, track_content: content, track_days: days, track_holds: holds,
+    track_exercises: exercises, track_exercise_logs: exercise_logs, track_settings: settings
   };
 }
 

@@ -29,8 +29,9 @@ function renderToday() {
   const streakEl = document.getElementById("sidebar-streak");
   if (streakEl) streakEl.textContent = streak ? plural(streak, "day") + " streak" : "Day one";
 
+  const exSt = exerciseStatus(t);
   const hits = [num(day.dms_sent) >= dmTarget, videos >= num(s.target_videos), num(day.comm_minutes) >= commTarget,
-                !!day.god_first, !!day.exercise, blogs >= num(s.target_blogs)].filter(Boolean).length;
+                !!day.god_first, exerciseDoneOn(t), blogs >= num(s.target_blogs)].filter(Boolean).length;
 
   const actions =
     '<a class="icon-btn" href="' + CALENDAR_URL + '" target="_blank" rel="noopener" aria-label="Open Google Calendar" title="Google Calendar">' + ICONS.calendar + "</a>" +
@@ -109,7 +110,11 @@ function renderToday() {
         trackRow("mic", "Communication practice", "target " + minutesLabel(commTarget), num(day.comm_minutes) >= commTarget,
           stepper("comm", num(day.comm_minutes), commTarget, [15, 30], " min")) +
         toggleRow("god_first", "book", "Time with God before the phone", !!day.god_first) +
-        toggleRow("exercise", "activity", "Exercise", !!day.exercise) +
+        (exSt
+          ? trackRow("exercise", "Exercise", exSt.done + " of " + exSt.total + " done", exSt.all,
+              '<span class="step-val">' + exSt.done + "<small>/" + exSt.total + "</small></span>" +
+              '<button class="btn btn-ghost btn-sm" data-goto="exercise">Open</button>')
+          : toggleRow("exercise", "exercise", "Exercise", !!day.exercise)) +
         trackRow("book", "Blog posts this week", "target " + num(s.target_blogs) + " a week", blogs >= num(s.target_blogs),
           '<span class="step-val">' + blogs + "<small>/" + num(s.target_blogs) + "</small></span>" +
           (blog ? '<button class="btn btn-ghost btn-sm" id="blog-done" title="' + escapeHtml(blog.title) + '">Published one</button>' : "")) +
@@ -118,11 +123,15 @@ function renderToday() {
 
     // Content next
     '<section class="panel next-card">' +
-      '<div class="panel-head"><h2>Content</h2><span class="panel-meta">' + plural(contentQueueCount(), "video") + " in progress</span></div>" +
+      '<div class="panel-head"><h2>Content</h2><span class="panel-meta">' +
+        (weekTargetTotal() ? postedThisWeek() + " of " + weekTargetTotal() + " posted this week" : plural(contentInProgress().length, "video") + " in progress") + "</span></div>" +
       (next
-        ? '<div class="next-line"><span class="next-verb">' + escapeHtml(next.verb) + '</span><span class="next-what">' + escapeHtml(next.item.title) + "</span>" +
-          '<button class="btn btn-ghost btn-sm" id="content-advance" data-id="' + next.item.id + '">Done</button></div>'
-        : '<p class="panel-empty-text">Nothing in the queue. Add an idea on the Content page.</p>') +
+        ? '<div class="next-line"><span class="next-verb">' + escapeHtml(next.verb) + '</span><span class="next-what">' + escapeHtml(next.title) +
+            (next.format ? ' <span class="next-week">' + escapeHtml(next.format.label) + ", " + next.format.posted + " of " + next.format.target + " this week</span>" : "") + "</span>" +
+          (next.item
+            ? '<button class="btn btn-ghost btn-sm" id="content-advance" data-id="' + next.item.id + '">Done</button>'
+            : '<button class="btn btn-ghost btn-sm" data-goto="content">Open</button>') + "</div>"
+        : '<p class="panel-empty-text">' + (weekTargetTotal() ? "Every format is at its weekly target. Post anything you like." : "Set a weekly mix in Settings and this tells you what to make.") + "</p>") +
     "</section>" +
 
     // Follow-ups
@@ -332,6 +341,9 @@ function wireToday(focus) {
   const adv = page.querySelector("#content-advance");
   if (adv) adv.addEventListener("click", function () { advanceContent(adv.dataset.id); renderToday(); });
 
+  page.querySelectorAll("[data-goto]").forEach(function (b) {
+    b.addEventListener("click", function () { showSection(b.dataset.goto); });
+  });
   page.querySelectorAll("[data-lead]").forEach(function (li) {
     li.addEventListener("click", function () { openLeadForm(li.dataset.lead); });
   });

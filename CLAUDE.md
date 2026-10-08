@@ -1,7 +1,7 @@
 # Track
 
 Njabulo's personal daily operating system: Today, Tasks, Pipeline, Content,
-Review, Settings. One user, one screen that says what to do next. Built
+Exercise, Review, Settings. One user, one screen that says what to do next. Built
 2026-10-08 around eight problems he listed (falling off DMs on mood, task
 switching, content overwhelm, screen time, impulse purchases, an unread
 notebook, forgotten blog posts, inconsistency). **Every feature maps to one of
@@ -13,10 +13,38 @@ en dashes in copy. Money is **USD** everywhere (`formatUSD` in `js/derive.js`).
 The goal is $5,000 this period; his offers are local SEO at $1,000 to $1,500 a
 month and web design at $1,000 to $3,000.
 
-Architecture is lifted from `My Projects/Projects/Agency CRM`: same tokens,
-same shell, same sync engine (normalized tables, outbox, soft deletes,
-last-write-wins trigger). Read that project's CLAUDE.md for the sync design
-rationale; this file covers what is different.
+The sync engine is lifted from `My Projects/Projects/Agency CRM` (normalized
+tables, outbox, soft deletes, last-write-wins trigger); read that project's
+CLAUDE.md for the rationale. **The look is NOT the CRM's.** The first build
+reused the CRM's tokens (bordered cards, two-layer shadows, Instrument Sans,
+sticky blurred topbar) and Njabulo rejected it the same day: "way too similar
+to the CRM", "looks like MyDay", "I told you to make it look like Todoist".
+
+## The look: Todoist, in black and white
+
+He sent a Todoist screenshot as the reference. Match it, not the CRM:
+
+- White page. Sidebar is a soft warm off-white (`--sidebar`), 280px, with the
+  user row at the top, then "Add task" with a filled plus circle, then the nav
+  rows with a quiet count on the right (red badge only for follow-ups due).
+- Big bold page title (26px) with a small grey line under it that starts with
+  a check icon ("3 tasks", "3 of 14 posted this week"). Nothing sticky,
+  nothing blurred.
+- **No cards.** Sections are a bold 15px heading with a hairline under it.
+  Rows are divided by hairlines. No borders around rows, no shadows anywhere
+  except the modal and sheet.
+- Task rows: 18px circle, title, a meta line under it (date in green for
+  today, red for overdue), and the label ("Agency", "Inbox") at the bottom
+  right. Date group headers read "Oct 8 · Today · Thursday".
+- The add row is "+ Add task" at the bottom of the list and types inline.
+- System font stack, same as Todoist. No Google Fonts link.
+- Monochrome: black is the only accent. Green for a target hit, red for
+  overdue. The Todoist orange is deliberately not used; he asked for black
+  and white with a light/dark switch.
+- Mobile: flat bottom bar with a hairline on top, not a floating pill.
+
+If a screen starts growing boxes, shadows or stat tiles, it is drifting back
+toward the CRM. Flatten it.
 
 ## The behaviour rules (why the app is shaped like this)
 
@@ -26,7 +54,7 @@ rationale; this file covers what is different.
   05:00:05 so a tab left open rolls over.
 - **Stored vs derived.** Anything he taps is stored on the `days` row
   (`dms_sent`, `comm_minutes`, `god_first`, `exercise`, `screen_minutes`,
-  check-in answers, `focus_log`). Anything that is a fact about another record
+  check-in answers, `focus_log`) or on an `exercise_logs` row. Anything that is a fact about another record
   is derived at render: videos posted today = `content.posted_date`, blogs this
   week = `content.blog_date`, parks = `focus_log`, Top 3 = `tasks.top_date`,
   money = `leads.won_date`. Nothing stores its own total. Do not add a counter
@@ -55,9 +83,21 @@ rationale; this file covers what is different.
 - **Check-in asks for two things.** A skip reason (only when DMs are under
   target) and yes or no to "1% better". Everything else is a tap or optional.
   If it takes more than thirty seconds it will not happen nightly.
-- **Content cap is soft.** Over `CONTENT_QUEUE_CAP` (10) started-but-not-posted
-  videos, the add button turns into "Add anyway (N waiting)" and a notice
-  explains why. It never blocks.
+- **Content is formats first, not ideas.** He will not be adding video ideas;
+  he has the scripts. The page is the weekly mix from Settings
+  (`settings.weekly_mix`, e.g. teach 6, proof 4, story 2, day in the life 2,
+  fourteen a week at two a day), each format with its posted count for the
+  week and ONE next step: the furthest-along unposted video of that format
+  (Film / Edit / Post), or "Script" when the format has nothing in the
+  pipeline. The scripts themselves are a collapsed list underneath.
+  `nextContentAction()` picks the format furthest behind its target and
+  feeds the Today card. "Log a post" creates a posted row so untracked posts
+  still count. There is no idea stage and no idea cap.
+- **Exercise is a list he defines.** `exercises` (name, target, unit) and
+  `exercise_logs` (date, exercise_id, amount) keyed by `exLogId(date, id)`.
+  Done for the day = every active exercise at target. The Exercise row on
+  Today reads that; with no exercises set up it falls back to the plain
+  `days.exercise` toggle.
 - **Holds block nothing.** They show the maths: days until the decision date,
   clients needed at the average won value, and how far the goal still is.
 
@@ -72,13 +112,13 @@ rationale; this file covers what is different.
 | `js/sync.js` | `TABLES` registry, localStorage-first db, outbox, `applyRemote`, `pullAll`, realtime, lazy `connectSupabase()`, `dayGet`/`dayRow`/`bumpDay`, `S()`/`saveSettings`, export/import. |
 | `js/derive.js` | Dates (5AM boundary), money, every derived number. Pure functions over `db.*`. |
 | `js/ui.js` | Router, nav, theme (light/dark/system), modal, sheet, confirm, toast, `pageHeader`. |
-| `js/tasks.js`, `content.js`, `pipeline.js`, `today.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module-level state is prefixed with the page name (`tasksView`, `contentFilter`): one shared global scope, a bare `filter` in two files is a parse error that kills the app. |
+| `js/tasks.js`, `content.js`, `exercise.js`, `pipeline.js`, `today.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module-level state is prefixed with the page name (`tasksView`, `contentFilter`): one shared global scope, a bare `filter` in two files is a parse error that kills the app. |
 | `js/boot.js` | PIN gate (hash compare), bootstrap, service worker, 05:00 watcher, splash. |
-| `supabase/schema.sql` | Six tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
+| `supabase/schema.sql` | Eight tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
 | `tools/serve.js` | `http://127.0.0.1:4178/` |
 | `tools/seed.js` | Fake data relative to today. `--gate`, `--focus`. |
 | `tools/shoot.js` | Puppeteer screenshots, six pages, three widths, both themes. `--gate --focus --checkin --empty`. |
-| `tools/test.js` | 57 headless assertions: day boundary, quick-add parsing, stats on seed, star limit, stamping, focus, export/import, the gate and check-in flow, fresh install, `file://` boot. Run after any change to `derive.js`, `sync.js`, `checkin.js` or `today.js`. |
+| `tools/test.js` | 64 headless assertions: day boundary, quick-add parsing, stats on seed, star limit, stamping, focus, export/import, the gate and check-in flow, fresh install, `file://` boot. Run after any change to `derive.js`, `sync.js`, `checkin.js` or `today.js`. |
 
 ## Per-device vs synced
 
@@ -87,9 +127,10 @@ Per device (localStorage, never synced): `track_theme`, `track_pin_hash`
 `track_sb_key`, the outbox keys, and the `track_<table>` caches.
 `track_unlocked` is sessionStorage.
 
-Synced (Supabase, once connected): all six tables, including `settings`,
+Synced (Supabase, once connected): all eight tables, including `settings`,
 which is a singleton row with id `stableId("settings")`. `days` rows use
-`stableId("day:" + date)` so both devices write the same row.
+`stableId("day:" + date)` and `exercise_logs` use `stableId("ex:" + date + ":" + id)`
+so both devices write the same row.
 
 **The Supabase URL and key are typed into Settings, not stored in source.**
 That is why the GitHub repo can be public (GitHub Pages on a free account

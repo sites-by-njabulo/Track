@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Track</title>
 <meta name="description" content="One screen that says what to do next. Daily operating system for sitesbynjabulo.">
-<meta name="theme-color" content="#f4f4f6">
+<meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,9 +15,6 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script>
 // Theme is applied here, in <head>, before the body paints, so a dark-mode
@@ -84,25 +81,20 @@
 <div id="app-view" class="app-shell hidden">
 
   <aside class="sidebar">
-    <div class="workspace">
-      <span class="workspace-mark">T</span>
-      <span class="workspace-text">
-        <strong>Track</strong>
-        <small>sitesbynjabulo</small>
-      </span>
+    <div class="user-row">
+      <span class="avatar">N</span>
+      <span class="user-text"><strong>Njabulo</strong><small id="sidebar-streak">Day one</small></span>
     </div>
+
+    <button class="add-task-link" id="sidebar-add-task">
+      <span class="add-task-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span>Add task</span>
+    </button>
 
     <nav id="sidebar-nav" class="sidebar-nav"></nav>
 
     <div class="sidebar-foot">
       <div class="sync-status tone-muted" data-sync-status><span class="sync-dot"></span><span>Starting</span></div>
-      <div class="user-row">
-        <span class="avatar">N</span>
-        <span class="user-text">
-          <strong>Njabulo</strong>
-          <small id="sidebar-streak">Day one</small>
-        </span>
-      </div>
     </div>
   </aside>
 
@@ -111,6 +103,7 @@
     <section class="page" data-page="tasks"    id="page-tasks"></section>
     <section class="page" data-page="pipeline" id="page-pipeline"></section>
     <section class="page" data-page="content"  id="page-content"></section>
+    <section class="page" data-page="exercise" id="page-exercise"></section>
     <section class="page" data-page="review"   id="page-review"></section>
     <section class="page" data-page="settings" id="page-settings"></section>
   </main>
@@ -173,6 +166,7 @@
 <script src="js/ui.js"></script>
 <script src="js/tasks.js"></script>
 <script src="js/content.js"></script>
+<script src="js/exercise.js"></script>
 <script src="js/pipeline.js"></script>
 <script src="js/today.js"></script>
 <script src="js/checkin.js"></script>

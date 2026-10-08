@@ -1,11 +1,13 @@
 /* ==========================================================
    9. TASKS
    ========================================================== */
-// Todoist-shaped: one quick-add box, three views, star to Top 3. Module state
-// is prefixed with the section name because every file shares one scope.
+// Todoist-shaped: a big title, a count line, date group headers, plain rows,
+// and a "+ Add task" row at the bottom that types inline. Module state is
+// prefixed with the section name because every file shares one scope.
 
-let tasksView = "today";      // inbox | today | upcoming
+let tasksView = "today";      // today | upcoming | inbox
 let tasksShowDone = false;
+let tasksAdding = false;      // the inline add row is open
 
 const TASK_FIELDS = [
   { key: "title", label: "Task",  type: "text", required: true, autofocus: true, placeholder: "What needs doing" },
@@ -50,62 +52,82 @@ function taskSort(a, b) {
   return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
 }
 
+// "Oct 8 · Today · Thursday", the Todoist date line.
+function dateGroupLabel(key) {
+  const d = parseKey(key);
+  const rel = relativeDayLabel(key);
+  const md = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const wd = d.toLocaleDateString("en-US", { weekday: "long" });
+  const parts = [md];
+  if (rel === "Today" || rel === "Tomorrow") parts.push(rel);
+  parts.push(wd);
+  return parts.join(" · ");
+}
+
 function renderTasks() {
   const b = tasksBuckets();
   const t = dayKey();
   const done = db.tasks.filter(function (x) { return x.done; })
     .sort(function (a, c) { return (c.done_date || "") + (c.updated_at || "") < (a.done_date || "") + (a.updated_at || "") ? -1 : 1; });
 
-  let body;
+  let body = "";
+  let count = 0;
   if (tasksView === "inbox") {
     const rows = b.inbox.slice().sort(function (a, c) { return (c.created_at || "") < (a.created_at || "") ? -1 : 1; });
-    body = rows.length ? taskList(rows, t)
-      : emptyState("inbox", "Inbox is empty", "Anything you type above without a date lands here. Give it a day when you know one.");
+    count = rows.length;
+    body = rows.length ? taskList(rows, t) : "";
   } else if (tasksView === "today") {
     const overdue = b.today.filter(function (x) { return x.due && x.due < t; }).sort(taskSort);
     const due = b.today.filter(function (x) { return !(x.due && x.due < t); }).sort(function (a, c) {
       const at = a.top_date === t ? 0 : 1, ct = c.top_date === t ? 0 : 1;
       return at !== ct ? at - ct : taskSort(a, c);
     });
+    count = overdue.length + due.length;
     body = (overdue.length ? '<p class="group-label">Overdue</p>' + taskList(overdue, t) : "") +
-           (due.length ? (overdue.length ? '<p class="group-label">Today</p>' : "") + taskList(due, t) : "") +
-           (!overdue.length && !due.length
-             ? emptyState("tasks", "Nothing due today", "Add a task with the word today at the end, or star something from the Inbox to make it a Top 3.")
-             : "");
+           '<p class="group-label">' + escapeHtml(dateGroupLabel(t)) + "</p>" +
+           (due.length ? taskList(due, t) : "");
   } else {
     const rows = b.upcoming.slice().sort(taskSort);
-    if (!rows.length) {
-      body = emptyState("calendar", "Nothing scheduled", "Type a task and end it with tomorrow, a weekday, or next week.");
-    } else {
-      let html = "", last = null;
-      rows.forEach(function (x) {
-        if (x.due !== last) {
-          if (last !== null) html += "</ul>";
-          html += '<p class="group-label">' + escapeHtml(relativeDayLabel(x.due)) +
-                  '<span class="group-sub">' + escapeHtml(formatShortDate(x.due)) + "</span></p>" + '<ul class="task-list">';
-          last = x.due;
-        }
-        html += taskRow(x, t);
-      });
-      body = html + "</ul>";
-    }
+    count = rows.length;
+    let last = null;
+    rows.forEach(function (x) {
+      if (x.due !== last) {
+        if (last !== null) body += "</ul>";
+        body += '<p class="group-label">' + escapeHtml(dateGroupLabel(x.due)) + "</p>" + '<ul class="task-list">';
+        last = x.due;
+      }
+      body += taskRow(x, t);
+    });
+    if (last !== null) body += "</ul>";
   }
 
+  const addRow = tasksAdding
+    ? '<div class="add-inline">' +
+        '<input type="text" id="task-input" placeholder="Task name. End with a day: fri, tomorrow, next week" aria-label="New task" autocomplete="off">' +
+        '<div class="add-inline-foot">' +
+          '<span class="add-inline-hint">' + (tasksView === "today" ? "Due today" : tasksView === "upcoming" ? "Due tomorrow unless you say otherwise" : "No date, lands in the Inbox") + "</span>" +
+          '<span class="add-inline-actions"><button class="btn btn-ghost btn-sm" id="task-cancel">Cancel</button>' +
+          '<button class="btn btn-primary btn-sm" id="task-add-btn">Add task</button></span>' +
+        "</div>" +
+      "</div>"
+    : '<button class="add-row add-task-row" id="task-add-open">' + ICONS.plus + "<span>Add task</span></button>";
+
   const html =
-    pageHeader("Tasks", "Type it, give it a day, star three.") +
+    pageHeader("Tasks", '<span class="sub-check">' + ICONS.check + "</span>" + plural(count, "task"),
+      '<div class="segmented-wrap">' + segmented("tasks-view", [
+        { value: "today", label: "Today", count: b.today.length },
+        { value: "upcoming", label: "Upcoming", count: b.upcoming.length },
+        { value: "inbox", label: "Inbox", count: b.inbox.length }
+      ], tasksView) + "</div>") +
     '<div class="col">' +
-      '<div class="todo-add">' +
-        '<input type="text" id="task-input" placeholder="Add a task. End with today, tomorrow or a weekday." aria-label="New task" autocomplete="off">' +
-        '<button class="btn btn-primary" id="task-add-btn" aria-label="Add task"><span class="btn-icon">' + ICONS.plus + "</span></button>" +
-      "</div>" +
-      '<div class="toolbar"><div class="segmented-wrap">' +
-        segmented("tasks-view", [
-          { value: "today", label: "Today", count: b.today.length },
-          { value: "upcoming", label: "Upcoming", count: b.upcoming.length },
-          { value: "inbox", label: "Inbox", count: b.inbox.length }
-        ], tasksView) +
-      "</div></div>" +
       body +
+      addRow +
+      (count === 0 && !tasksAdding
+        ? '<p class="panel-empty-text">' +
+            (tasksView === "today" ? "Nothing due today. Star something from the Inbox or add a task."
+             : tasksView === "upcoming" ? "Nothing scheduled. End a task with tomorrow, a weekday, or next week."
+             : "Inbox is empty. Anything without a date lands here.") + "</p>"
+        : "") +
       (done.length
         ? '<div class="todo-done-block">' +
             '<button class="link-btn" id="tasks-toggle-done">' + (tasksShowDone ? "Hide" : "Show") + " " + plural(done.length, "completed task") + "</button>" +
@@ -126,18 +148,23 @@ function taskRow(x, t) {
   const top = x.top_date === t;
   const overdue = x.due && x.due < t && !x.done;
   const meta = [];
-  if (x.due) meta.push('<span class="' + (overdue ? "cell-overdue" : "task-due") + '">' + escapeHtml(relativeDayLabel(x.due)) + "</span>");
-  if (x.area) meta.push('<span class="task-area">' + escapeHtml(lookup(TASK_AREAS, x.area).label) + "</span>");
+  if (x.due && (tasksView !== "upcoming" || x.done)) {
+    meta.push('<span class="' + (overdue ? "cell-overdue" : "task-due") + '">' + ICONS.calendar + escapeHtml(relativeDayLabel(x.due)) + "</span>");
+  }
+  if (top && !x.done) meta.push('<span class="task-top-mark">' + ICONS.starFill + "Top 3</span>");
   return '<li class="task-row' + (x.done ? " done" : "") + (top ? " top" : "") + '" data-id="' + x.id + '">' +
     '<button class="todo-check" data-toggle aria-label="' + (x.done ? "Mark as not done" : "Mark as done") + '">' + (x.done ? ICONS.check : "") + "</button>" +
     '<div class="task-body" data-edit tabindex="0">' +
       '<span class="task-title">' + escapeHtml(x.title) + "</span>" +
-      (meta.length ? '<span class="task-meta">' + meta.join('<span class="dot-sep"></span>') + "</span>" : "") +
+      (meta.length ? '<span class="task-meta">' + meta.join("") + "</span>" : "") +
     "</div>" +
-    (x.done ? "" :
-      '<button class="icon-btn task-star' + (top ? " on" : "") + '" data-star aria-label="' + (top ? "Remove from Top 3" : "Make a Top 3 for today") + '">' +
-        (top ? ICONS.starFill : ICONS.star) + "</button>") +
-    '<button class="icon-btn task-delete" data-delete aria-label="Delete task">' + ICONS.trash + "</button>" +
+    '<span class="task-right">' +
+      (x.done ? "" :
+        '<button class="icon-btn task-star' + (top ? " on" : "") + '" data-star aria-label="' + (top ? "Remove from Top 3" : "Make a Top 3 for today") + '">' +
+          (top ? ICONS.starFill : ICONS.star) + "</button>") +
+      '<button class="icon-btn task-delete" data-delete aria-label="Delete task">' + ICONS.trash + "</button>" +
+      '<span class="task-area">' + escapeHtml(lookup(TASK_AREAS, x.area).label === "No area" ? "Inbox" : lookup(TASK_AREAS, x.area).label) + "</span>" +
+    "</span>" +
   "</li>";
 }
 
@@ -145,9 +172,10 @@ function addTaskFromInput(input) {
   const parsed = parseQuickAdd(input.value);
   if (!parsed.title) return;
   const fields = { title: parsed.title, due: parsed.due };
-  if (tasksView === "today" && !parsed.due) fields.due = dayKey();
+  if (!parsed.due && tasksView === "today") fields.due = dayKey();
+  if (!parsed.due && tasksView === "upcoming") fields.due = shiftKey(dayKey(), 1);
   create("tasks", fields);
-  input.value = "";
+  tasksAdding = true;
   renderTasks();
   const fresh = document.getElementById("task-input");
   if (fresh) fresh.focus();
@@ -184,7 +212,7 @@ function setTaskDone(id, done) {
 function openTaskForm(id, preset) {
   const x = id ? byId("tasks", id) : null;
   openForm({
-    title: x ? "Edit task" : "New task",
+    title: x ? "Edit task" : "Add task",
     fields: TASK_FIELDS,
     values: x || preset || {},
     saveLabel: x ? "Save" : "Add task",
@@ -201,15 +229,26 @@ function openTaskForm(id, preset) {
 
 function wireTasks() {
   const page = document.getElementById("page-tasks");
-  const input = page.querySelector("#task-input");
 
-  input.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") { e.preventDefault(); addTaskFromInput(input); }
+  const open = page.querySelector("#task-add-open");
+  if (open) open.addEventListener("click", function () {
+    tasksAdding = true;
+    renderTasks();
+    const fresh = document.getElementById("task-input");
+    if (fresh) fresh.focus();
   });
-  page.querySelector("#task-add-btn").addEventListener("click", function () { addTaskFromInput(input); });
+  const input = page.querySelector("#task-input");
+  if (input) {
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); addTaskFromInput(input); }
+      if (e.key === "Escape") { tasksAdding = false; renderTasks(); }
+    });
+    page.querySelector("#task-add-btn").addEventListener("click", function () { addTaskFromInput(input); });
+    page.querySelector("#task-cancel").addEventListener("click", function () { tasksAdding = false; renderTasks(); });
+  }
 
   page.querySelectorAll("#tasks-view button").forEach(function (b) {
-    b.addEventListener("click", function () { tasksView = b.dataset.value; renderTasks(); });
+    b.addEventListener("click", function () { tasksView = b.dataset.value; tasksAdding = false; renderTasks(); });
   });
 
   const toggleDone = page.querySelector("#tasks-toggle-done");

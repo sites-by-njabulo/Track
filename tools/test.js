@@ -83,7 +83,7 @@ async function openApp(browser, seed, url) {
     console.log('stats');
     const seed = buildSeed({});
     const expectedDms = seed.track_days.reduce((s, d) => s + d.dms_sent, 0);
-    const r2 = await page.evaluate(() => ({ s: statsFor(30), goal: goalProgress(), avg: avgDealValue(), streak: checkinStreak(), gate: gateDayKey(), videos: videosPostedOn(dayKey()), blogs: blogsThisWeek(), next: nextContentAction(), queue: contentQueueCount() }));
+    const r2 = await page.evaluate(() => ({ s: statsFor(30), goal: goalProgress(), avg: avgDealValue(), streak: checkinStreak(), gate: gateDayKey(), videos: videosPostedOn(dayKey()), blogs: blogsThisWeek(), next: nextContentAction(), mix: weekMixStatus(), ex: exerciseStatus(dayKey()), exDone: exerciseDoneOn(dayKey()) }));
     check('DMs sum over 30 days', r2.s.dms === expectedDms, [r2.s.dms, expectedDms]);
     check('replies = 6 leads replied in window', r2.s.replies === 6, r2.s.replies);
     check('won = 1, $1,200', r2.s.won === 1 && r2.s.money === 1200, r2.s);
@@ -92,8 +92,9 @@ async function openApp(browser, seed, url) {
     check('streak = 29 (today open does not break it)', r2.streak === 29, r2.streak);
     check('no gate when yesterday closed', r2.gate === null, r2.gate);
     check('videos posted today = 1', r2.videos === 1, r2.videos);
-    check('next action is the edited one', r2.next && r2.next.verb === 'Post' && r2.next.item.stage === 'edited', r2.next && r2.next.item.title);
-    check('queue count = 5', r2.queue === 5, r2.queue);
+    check('weekly mix has 4 formats totalling 14', r2.mix.length === 4 && r2.mix.reduce((n, f) => n + f.target, 0) === 14, r2.mix);
+    check('next action is the format furthest behind', r2.next && r2.next.format && r2.next.format.value === 'teach' && r2.next.verb === 'Film', r2.next && [r2.next.format.value, r2.next.verb, r2.next.title]);
+    check('exercise status 2 of 4, not done', r2.ex && r2.ex.total === 4 && r2.ex.done === 2 && r2.exDone === false, r2.ex);
     check('goal counts only this month', r2.goal.won === 0 && r2.goal.target === 5000, r2.goal);
 
     // ---------- 3. Writes ----------
@@ -117,7 +118,7 @@ async function openApp(browser, seed, url) {
       out.thenFits = toggleTop(inbox.id, t) === true && inbox.top_date === t;
 
       // Content stamping
-      const scripted = db.content.find((c) => c.stage === 'scripted');
+      const scripted = db.content.find((c) => c.stage === 'scripted' && c.format === 'teach');
       advanceContent(scripted.id);
       out.filmed = scripted.stage === 'filmed' && scripted.posted_date === null;
       setContentStage(scripted.id, 'posted');
@@ -141,6 +142,16 @@ async function openApp(browser, seed, url) {
       startFocus(task.id);
       endFocus('finished', null, true);
       out.finished = byId('tasks', task.id).done === true && dayGet(t).focus_log.length === 2;
+
+      // Exercise: bump to target flips done, log row is stable-keyed
+      const run = db.exercises.find((e) => e.name === 'Run');
+      bumpExercise(t, run.id, 10);
+      out.exerciseBump = exerciseAmount(t, run.id) === 20 && exerciseHit(t, run);
+      bumpExercise(t, run.id, 10);
+      out.exerciseLogSingle = db.exercise_logs.filter((l) => l.date === t && l.exercise_id === run.id).length === 1;
+      const plank = db.exercises.find((e) => e.name === 'Plank');
+      bumpExercise(t, plank.id, 5);
+      out.exerciseAllDone = exerciseDoneOn(t) === true && exerciseStatus(t).done === 4;
 
       // Hold maths
       out.clients = clientsNeeded(1200);
@@ -211,9 +222,13 @@ async function openApp(browser, seed, url) {
     // ---------- 5. Fresh install: no gate, empty states, file:// ----------
     console.log('fresh + file://');
     ({ page, errors } = await openApp(browser, {}));
-    const r5 = await page.evaluate(() => ({ gate: gateDayKey(), streak: checkinStreak(), tasks: db.tasks.length, settings: S().target_dms, pin: pinIsDefault() }));
+    const r5 = await page.evaluate(() => ({ gate: gateDayKey(), streak: checkinStreak(), tasks: db.tasks.length, settings: S().target_dms, pin: pinIsDefault(), mixTotal: weekTargetTotal(), next: nextContentAction(), ex: exerciseStatus(dayKey()) }));
     check('fresh install has no gate', r5.gate === null);
     check('fresh install defaults', r5.streak === 0 && r5.tasks === 0 && r5.settings === 30 && r5.pin === true, r5);
+    check('fresh install: mix defaults to 14, next action is Script', r5.mixTotal === 14 && r5.next && r5.next.verb === 'Script' && r5.next.item === null, r5.next);
+    check('fresh install: no exercises means toggle mode', r5.ex === null);
+    const r5b = await page.evaluate(() => { showSection('exercise'); showSection('content'); showSection('tasks'); return { ok: true, pages: ['exercise','content','tasks'].map((p) => document.getElementById('page-' + p).innerHTML.length > 100) }; });
+    check('empty pages render', r5b.pages.every(Boolean), r5b.pages);
     check('no page errors on fresh install', errors.length === 0, errors);
     await page.close();
 

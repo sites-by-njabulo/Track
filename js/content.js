@@ -1,130 +1,81 @@
 /* ==========================================================
    10. CONTENT
    ========================================================== */
-// One list of videos with a stage. The next action is derived from the stage,
-// so the page always answers "what do I do with content right now" without
-// him opening Instagram to find out.
-
-let contentFilter = "queue";   // queue | all | idea | scripted | filmed | edited | posted
+// Formats first. He already has the scripts; what he lacks is a clear answer
+// to "which kind of video this week, and what do I do with it next". So the
+// page is the weekly mix from Settings, each format with its count and its
+// one next step. The scripts themselves are a quiet list underneath.
 
 const CONTENT_FIELDS = [
   { key: "title",  label: "Title",  type: "text", required: true, autofocus: true, placeholder: "The hook, or a working title" },
   { key: "format", label: "Format", type: "select", options: CONTENT_FORMATS, half: true },
   { key: "stage",  label: "Stage",  type: "select", options: CONTENT_STAGES, half: true },
   { key: "link",   label: "Script link", type: "url", placeholder: "Google Doc, Notes, anything" },
-  { key: "notes",  label: "Notes",  type: "textarea", placeholder: "Angle, proof to include, where it goes" }
+  { key: "notes",  label: "Notes",  type: "textarea", placeholder: "Angle, proof to include" }
 ];
 
-function contentVisible() {
-  let rows = db.content.slice();
-  if (contentFilter === "queue") rows = rows.filter(function (c) { return c.stage !== "posted"; });
-  else if (contentFilter !== "all") rows = rows.filter(function (c) { return c.stage === contentFilter; });
-  rows.sort(function (a, b) {
-    if (contentFilter === "posted" || contentFilter === "all") {
-      return (b.posted_date || b.updated_at || "") < (a.posted_date || a.updated_at || "") ? -1 : 1;
-    }
-    const r = (STAGE_RANK[a.stage] !== undefined ? STAGE_RANK[a.stage] : 9) - (STAGE_RANK[b.stage] !== undefined ? STAGE_RANK[b.stage] : 9);
-    if (r) return r;
-    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
-  });
-  return rows;
-}
-
 function renderContent() {
+  const mix = weekMixStatus();
+  const total = weekTargetTotal();
+  const posted = postedThisWeek();
   const next = nextContentAction();
-  const queue = contentQueueCount();
-  const capped = queue > CONTENT_QUEUE_CAP;
-  const ideas = db.content.filter(function (c) { return c.stage === "idea"; }).length;
-  const focus = S().focus_formats || [];
-  const mix = formatMix(30);
-  const mixMax = Math.max(1, Math.max.apply(null, mix.map(function (m) { return m.count; })));
   const blog = blogCandidate();
+  const blogs = blogsThisWeek();
+  const w = weekKeys(0);
+  const pipeline = contentInProgress().sort(byStageThenAge);
 
-  const sub = next
-    ? plural(queue, "video") + " started and not posted. Next: " + escapeHtml(next.verb) + " <strong>" + escapeHtml(next.item.title) + "</strong>."
-    : "Nothing in progress. Add an idea, or script one you already have.";
+  const sub = total
+    ? '<span class="sub-check">' + ICONS.check + "</span>" + posted + " of " + total + " posted this week, " + escapeHtml(formatShortDate(w[0]) + " to " + formatShortDate(w[6]))
+    : "Set a weekly mix in Settings and this page tells you what to make.";
 
-  const action = capped
-    ? '<button class="btn btn-ghost" id="add-content-btn">Add anyway <span class="chip-count">' + queue + " waiting</span></button>"
-    : primaryAction("Add idea", "add-content-btn");
-
-  const chips = [{ value: "queue", label: "In progress", count: db.content.length - db.content.filter(function (c) { return c.stage === "posted"; }).length },
-                 { value: "all", label: "All", count: db.content.length }]
-    .concat(CONTENT_STAGES.map(function (s) {
-      return { value: s.value, label: s.label, count: db.content.filter(function (c) { return c.stage === s.value; }).length };
-    }));
-
-  const rows = contentVisible();
+  const actions =
+    '<button class="btn btn-ghost btn-sm" id="log-post-btn">' + ICONS.plus + "<span>Log a post</span></button>";
 
   const html =
-    pageHeader("Content", sub, action) +
+    pageHeader("Content", sub, actions) +
+    '<div class="col">' +
 
-    (capped
-      ? '<div class="notice">' +
-          '<span class="notice-icon">' + ICONS.alert + "</span>" +
-          "<div><strong>Idea capture is closed.</strong> " + queue + " videos are started and not posted. Finish " +
-          (queue - CONTENT_QUEUE_CAP) + " before you go looking for new ideas. You are not short of ideas, you are short of posts.</div>" +
-        "</div>"
-      : "") +
+    (mix.length
+      ? '<ul class="mix-list">' + mix.map(function (f) {
+          const dots = [];
+          for (let i = 0; i < f.target; i++) dots.push('<span class="mix-dot' + (i < f.posted ? " on" : "") + '"></span>');
+          const n = f.next;
+          return '<li class="mix-row' + (f.hit ? " hit" : "") + '" data-format="' + f.value + '">' +
+            '<div class="mix-top">' +
+              '<span class="mix-name">' + escapeHtml(f.label) + "</span>" +
+              '<span class="mix-dots">' + dots.join("") + "</span>" +
+              '<span class="mix-count">' + f.posted + " of " + f.target + "</span>" +
+            "</div>" +
+            '<div class="mix-next">' +
+              (f.hit
+                ? '<span class="next-what quiet">Done for the week.</span>'
+                : '<span class="next-verb">' + escapeHtml(n.verb) + "</span>" +
+                  (n.item
+                    ? '<span class="next-what" data-open="' + n.item.id + '" tabindex="0">' + escapeHtml(n.item.title) + "</span>" +
+                      '<button class="btn btn-ghost btn-sm" data-advance="' + n.item.id + '">' + (n.nextStage === "posted" ? "Posted" : "Done") + "</button>"
+                    : '<span class="next-what quiet">Nothing in the pipeline for this one yet.</span>' +
+                      '<button class="btn btn-ghost btn-sm" data-add-format="' + f.value + '">Add a script</button>')) +
+            "</div>" +
+          "</li>";
+        }).join("") + "</ul>"
+      : '<p class="panel-empty-text">No weekly mix yet. <button class="link-btn" data-goto="settings">Set it in Settings</button>.</p>') +
 
-    '<div class="content-grid">' +
-      // Next action: the one card that answers "what now".
-      '<section class="panel next-panel">' +
-        '<p class="micro-label">Next action</p>' +
-        (next
-          ? '<h2 class="next-title"><span class="next-verb">' + escapeHtml(next.verb) + "</span> " + escapeHtml(next.item.title) + "</h2>" +
-            '<p class="next-sub">' + escapeHtml(lookup(CONTENT_FORMATS, next.item.format).label) + ", " +
-              escapeHtml(lookup(CONTENT_STAGES, next.item.stage).label.toLowerCase()) + " so far." +
-              (next.item.link ? ' <a class="doc-link" href="' + escapeHtml(next.item.link) + '" target="_blank" rel="noopener">Open script ' + ICONS.external + "</a>" : "") +
-            "</p>" +
-            '<div class="next-actions">' +
-              '<button class="btn btn-primary" data-advance="' + next.item.id + '">Done, mark ' + escapeHtml(lookup(CONTENT_STAGES, next.nextStage).label.toLowerCase()) + "</button>" +
-              '<button class="btn btn-ghost" data-open="' + next.item.id + '">Open</button>' +
-            "</div>"
-          : '<h2 class="next-title">Nothing to do yet</h2><p class="next-sub">Every idea you add shows up here with its next step.</p>') +
-      "</section>" +
-
-      // Formats: what he should be making, against what he made.
-      '<section class="panel">' +
-        '<div class="panel-head"><h2>Posted, last 30 days</h2>' +
-          (focus.length ? "" : '<button class="link-btn" data-goto="settings">Pick focus formats</button>') +
-        "</div>" +
-        '<ul class="mini-list">' +
-          mix.map(function (m) {
-            const isFocus = focus.indexOf(m.value) !== -1;
-            return '<li class="mini-bar-row' + (isFocus ? " focus" : "") + '">' +
-              '<div class="mini-bar-top"><span>' + escapeHtml(m.label) +
-                (isFocus ? ' <span class="pill tone-neutral">Focus</span>' : "") + "</span>" +
-                '<strong class="num">' + m.count + "</strong></div>" +
-              '<span class="mini-bar-track"><span class="mini-bar-fill" style="width:' + Math.round(m.count / mixMax * 100) + '%"></span></span>' +
-            "</li>";
-          }).join("") +
-        "</ul>" +
-        (focus.length
-          ? '<p class="panel-note">Focus: ' + focus.map(function (f) { return escapeHtml(lookup(CONTENT_FORMATS, f).label); }).join(" and ") +
-            ". Everything else is a side dish.</p>"
-          : '<p class="panel-note">Two formats, chosen once, so the question of what kind of video to make is already answered.</p>') +
-        (blog
-          ? '<div class="blog-row"><span>' + ICONS.book + "</span><div><strong>Blog this week: " + blogsThisWeek() + " of " + S().target_blogs + "</strong>" +
-            '<span class="cell-sub">Next post: ' + escapeHtml(blog.title) + '</span></div><button class="btn btn-ghost btn-sm" data-blog="' + blog.id + '">Published</button></div>'
-          : "") +
-      "</section>" +
+    // Blog
+    '<div class="blog-row"><span>' + ICONS.book + "</span><div><strong>Blog posts this week: " + blogs + " of " + S().target_blogs + "</strong>" +
+      '<span class="cell-sub">' + (blog ? "Next: " + escapeHtml(blog.title) : "Every script has a post. Nothing waiting.") + "</span></div>" +
+      (blog ? '<button class="btn btn-ghost btn-sm" data-blog="' + blog.id + '">Published</button>' : "") +
     "</div>" +
 
-    '<div class="toolbar"><div class="chip-row">' +
-      chips.map(function (c) {
-        return '<button class="chip' + (contentFilter === c.value ? " active" : "") + '" data-filter="' + c.value + '">' +
-               escapeHtml(c.label) + '<span class="chip-count">' + c.count + "</span></button>";
-      }).join("") +
-    "</div></div>" +
+    // The scripts, quietly
+    '<details class="pipe-details"' + (pipeline.length && !mix.length ? " open" : "") + '>' +
+      "<summary>" + ICONS.chevronRight + "In the pipeline, " + plural(pipeline.length, "video") + "</summary>" +
+      (pipeline.length
+        ? '<ul class="content-list">' + pipeline.map(contentRow).join("") + "</ul>"
+        : '<p class="panel-empty-text">Nothing scripted yet. Add the scripts you already have and each one shows its next step.</p>') +
+      '<button class="add-row" id="add-content-btn">' + ICONS.plus + "<span>Add a script</span></button>" +
+    "</details>" +
 
-    (rows.length
-      ? '<ul class="content-list">' + rows.map(contentRow).join("") + "</ul>"
-      : (db.content.length
-          ? emptyState("content", "Nothing here", "No videos match this filter.")
-          : emptyState("content", "No videos yet", "Add the scripts you already have. Each one shows its next step, and the oldest finished one is always the next thing to post."))) +
-
-    (ideas > 0 && contentFilter === "queue" ? "" : "");
+    "</div>";
 
   document.getElementById("page-content").innerHTML = html;
   wireContent();
@@ -137,9 +88,8 @@ function contentRow(c) {
       '<span class="content-title">' + escapeHtml(c.title) + "</span>" +
       '<span class="content-meta">' +
         '<span class="task-area">' + escapeHtml(lookup(CONTENT_FORMATS, c.format).label) + "</span>" +
-        '<span class="dot-sep"></span>' + pill(CONTENT_STAGES, c.stage) +
-        (c.posted_date ? '<span class="dot-sep"></span><span>Posted ' + escapeHtml(formatShortDate(c.posted_date)) + "</span>" : "") +
-        (c.blog_date ? '<span class="dot-sep"></span><span class="task-due">Blog ' + escapeHtml(formatShortDate(c.blog_date)) + "</span>" : "") +
+        '<span class="dot-sep"></span>' + escapeHtml(lookup(CONTENT_STAGES, c.stage).label) +
+        (c.blog_date ? '<span class="dot-sep"></span><span>Blog ' + escapeHtml(formatShortDate(c.blog_date)) + "</span>" : "") +
       "</span>" +
     "</div>" +
     (verb ? '<button class="btn btn-ghost btn-sm" data-advance="' + c.id + '">' + escapeHtml(verb) + "</button>" : "") +
@@ -162,7 +112,7 @@ function advanceContent(id) {
   if (!c || !NEXT_STAGE[c.stage]) return;
   const next = NEXT_STAGE[c.stage];
   setContentStage(id, next);
-  toast(next === "posted" ? "Posted. Counted on Today." : "Marked " + lookup(CONTENT_STAGES, next).label.toLowerCase());
+  toast(next === "posted" ? "Posted. Counted for the week." : "Marked " + lookup(CONTENT_STAGES, next).label.toLowerCase());
 }
 
 function markBlogPublished(id) {
@@ -173,9 +123,9 @@ function markBlogPublished(id) {
 function openContentForm(id, preset) {
   const c = id ? byId("content", id) : null;
   openForm({
-    title: c ? "Edit video" : "New idea",
+    title: c ? "Edit video" : "Add a script",
     fields: CONTENT_FIELDS,
-    values: c || Object.assign({ stage: "idea", format: (S().focus_formats || [])[0] || "other" }, preset || {}),
+    values: c || Object.assign({ stage: "scripted", format: (weeklyMix()[0] || {}).value || "other" }, preset || {}),
     saveLabel: c ? "Save" : "Add",
     onSave: function (values) {
       if (c) {
@@ -196,7 +146,7 @@ function openContentForm(id, preset) {
   });
 }
 
-// From Today: a post that was never tracked still counts. Two fields.
+// From Today and Content: a post that was never tracked still counts.
 function logPostQuick() {
   openForm({
     title: "Log a post",
@@ -204,7 +154,7 @@ function logPostQuick() {
       { key: "title",  label: "What did you post", type: "text", required: true, autofocus: true },
       { key: "format", label: "Format", type: "select", options: CONTENT_FORMATS }
     ],
-    values: { format: (S().focus_formats || [])[0] || "other" },
+    values: { format: (weeklyMix()[0] || {}).value || "other" },
     saveLabel: "Count it",
     onSave: function (values) {
       create("content", { title: values.title, format: values.format, stage: "posted", posted_date: dayKey() });
@@ -217,8 +167,9 @@ function logPostQuick() {
 function wireContent() {
   const page = document.getElementById("page-content");
   page.querySelector("#add-content-btn").addEventListener("click", function () { openContentForm(null); });
-  page.querySelectorAll(".chip").forEach(function (c) {
-    c.addEventListener("click", function () { contentFilter = c.dataset.filter; renderContent(); });
+  page.querySelector("#log-post-btn").addEventListener("click", logPostQuick);
+  page.querySelectorAll("[data-add-format]").forEach(function (b) {
+    b.addEventListener("click", function () { openContentForm(null, { format: b.dataset.addFormat }); });
   });
   page.querySelectorAll("[data-advance]").forEach(function (b) {
     b.addEventListener("click", function (e) { e.stopPropagation(); advanceContent(b.dataset.advance); renderContent(); });

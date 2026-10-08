@@ -259,32 +259,65 @@ function blogsThisWeek() {
   const w = weekKeys(0);
   return countContent("blog_date", w[0], w[6]);
 }
-function contentQueue() {
-  return db.content.filter(function (c) { return QUEUE_STAGES.indexOf(c.stage) !== -1; });
+const STAGE_RANK = { edited: 0, filmed: 1, scripted: 2 };
+
+// Formats with a weekly target, from Settings. The Content page is built
+// around this list, not around a list of ideas: he has the scripts, what he
+// lacks is a clear answer to "which kind of video, and what do I do with it".
+function weeklyMix() {
+  const m = S().weekly_mix || {};
+  return CONTENT_FORMATS
+    .filter(function (f) { return num(m[f.value]) > 0; })
+    .map(function (f) { return { value: f.value, label: f.label, target: Math.round(num(m[f.value])) }; });
 }
-function contentQueueCount() { return contentQueue().length; }
-
-const STAGE_RANK = { edited: 0, filmed: 1, scripted: 2, idea: 3 };
-
-// Closest to done first, focus formats before the rest, oldest first.
-function nextContentAction() {
-  const focus = S().focus_formats || [];
-  const list = db.content.filter(function (c) { return c.stage !== "posted"; }).sort(function (a, b) {
-    const r = (STAGE_RANK[a.stage] || 0) - (STAGE_RANK[b.stage] || 0);
-    if (r) return r;
-    const fa = focus.indexOf(a.format) !== -1 ? 0 : 1;
-    const fb = focus.indexOf(b.format) !== -1 ? 0 : 1;
-    if (fa !== fb) return fa - fb;
-    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
+function postedThisWeek(format) {
+  const w = weekKeys(0);
+  return db.content.filter(function (c) { return (!format || c.format === format) && inRange(c.posted_date, w[0], w[6]); }).length;
+}
+function rankStage(c) { return STAGE_RANK[c.stage] === undefined ? 9 : STAGE_RANK[c.stage]; }
+function byStageThenAge(a, b) {
+  const r = rankStage(a) - rankStage(b);
+  if (r) return r;
+  return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
+}
+// The furthest-along unposted video of a format, or "script one" if none.
+function formatNext(format) {
+  const items = db.content.filter(function (c) { return c.format === format && c.stage !== "posted"; }).sort(byStageThenAge);
+  if (items[0]) return { item: items[0], verb: NEXT_VERB[items[0].stage] || "Post", nextStage: NEXT_STAGE[items[0].stage] || "posted" };
+  return { item: null, verb: FIRST_VERB, nextStage: "scripted" };
+}
+function weekMixStatus() {
+  return weeklyMix().map(function (f) {
+    const posted = postedThisWeek(f.value);
+    return { value: f.value, label: f.label, target: f.target, posted: posted, hit: posted >= f.target, next: formatNext(f.value) };
   });
+}
+function weekTargetTotal() { return weeklyMix().reduce(function (s, f) { return s + f.target; }, 0); }
+function contentInProgress() { return db.content.filter(function (c) { return c.stage !== "posted"; }); }
+
+// The one next action for Today: the format furthest behind its weekly
+// target, and the furthest-along video in it. With no mix set, the
+// furthest-along video of any format.
+function nextContentAction() {
+  const mix = weekMixStatus();
+  if (mix.length) {
+    const behind = mix.filter(function (f) { return !f.hit; }).sort(function (a, b) {
+      return (b.target - b.posted) - (a.target - a.posted);
+    });
+    const pick = behind[0] || null;
+    if (!pick) return null;
+    return { format: pick, item: pick.next.item, verb: pick.next.verb, nextStage: pick.next.nextStage,
+             title: pick.next.item ? pick.next.item.title : "a " + pick.label.toLowerCase() + " video" };
+  }
+  const list = contentInProgress().sort(byStageThenAge);
   if (!list.length) return null;
-  return { item: list[0], verb: NEXT_VERB[list[0].stage] || "Post", nextStage: NEXT_STAGE[list[0].stage] || "posted" };
+  return { format: null, item: list[0], verb: NEXT_VERB[list[0].stage] || "Post", nextStage: NEXT_STAGE[list[0].stage] || "posted", title: list[0].title };
 }
 
 // A video whose script exists but has not become a blog post yet. Posted ones
 // first: the video is finished, the blog is the natural next move.
 function blogCandidate() {
-  const list = db.content.filter(function (c) { return c.stage !== "idea" && !c.blog_date; }).sort(function (a, b) {
+  const list = db.content.filter(function (c) { return !c.blog_date; }).sort(function (a, b) {
     const pa = a.stage === "posted" ? 0 : 1, pb = b.stage === "posted" ? 0 : 1;
     if (pa !== pb) return pa - pb;
     return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
@@ -292,14 +325,36 @@ function blogCandidate() {
   return list[0] || null;
 }
 
-// Posted count per format over the last n days.
-function formatMix(n) {
-  const keys = windowKeys(n);
-  const lo = keys[0], hi = keys[keys.length - 1];
-  return CONTENT_FORMATS.map(function (f) {
-    return { value: f.value, label: f.label,
-      count: db.content.filter(function (c) { return c.format === f.value && inRange(c.posted_date, lo, hi); }).length };
+/* ---------- Exercise ---------- */
+
+function activeExercises() {
+  return db.exercises.filter(function (e) { return e.active; }).sort(function (a, b) {
+    if (num(a.sort) !== num(b.sort)) return num(a.sort) - num(b.sort);
+    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
   });
+}
+function exerciseAmount(key, exerciseId) {
+  const r = byId("exercise_logs", exLogId(key, exerciseId));
+  return r ? num(r.amount) : 0;
+}
+function bumpExercise(key, exerciseId, delta) {
+  const lid = exLogId(key, exerciseId);
+  const r = byId("exercise_logs", lid);
+  const amount = Math.max(0, (r ? num(r.amount) : 0) + delta);
+  if (r) update("exercise_logs", lid, { amount: amount });
+  else create("exercise_logs", { date: key, exercise_id: exerciseId, amount: amount }, lid);
+}
+function exerciseHit(key, e) { return num(e.target) > 0 && exerciseAmount(key, e.id) >= num(e.target); }
+// null when no exercises are set up (then the plain toggle on Today applies).
+function exerciseStatus(key) {
+  const ex = activeExercises();
+  if (!ex.length) return null;
+  const done = ex.filter(function (e) { return exerciseHit(key, e); }).length;
+  return { total: ex.length, done: done, all: done === ex.length };
+}
+function exerciseDoneOn(key) {
+  const st = exerciseStatus(key);
+  return st ? st.all : !!dayGet(key).exercise;
 }
 
 /* ---------- Verse ---------- */
@@ -323,7 +378,7 @@ function dayStats(key) {
     parks: parksOn(key),
     closed: !!d.checkin_done,
     god: !!d.god_first,
-    exercise: !!d.exercise
+    exercise: exerciseDoneOn(key)
   };
 }
 
