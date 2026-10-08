@@ -11,7 +11,7 @@ function makeWeekPlanPage(cfg) {
   const fields = [
     { key: "label", label: cfg.labelTitle, type: "text", autofocus: true, placeholder: cfg.labelPlaceholder },
     { key: "rest",  label: "Rest", type: "checkbox", checkboxLabel: "Rest day, nothing to do" },
-    { key: "link",  label: cfg.linkTitle, type: "url", placeholder: "https://", hint: cfg.linkHint },
+    { key: "link",  label: cfg.linkTitle, type: "textarea", placeholder: "https://\nOne link per line, Enter for the next one", hint: cfg.linkHint },
     { key: "notes", label: "Notes", type: "textarea", placeholder: cfg.notesPlaceholder }
   ];
 
@@ -50,10 +50,9 @@ function makeWeekPlanPage(cfg) {
         return '<li class="plan-row' + (isToday ? " today" : "") + (p.rest ? " rest" : "") + (!p.rest && !p.label ? " unset" : "") + '" data-weekday="' + i + '" tabindex="0">' +
           '<span class="plan-day">' + name + (isToday ? '<span class="plan-today">Today</span>' : "") + "</span>" +
           '<span class="plan-label">' + escapeHtml(text) +
+            (!p.rest && planLinks(p).length ? '<span class="plan-notes plan-links" data-stop>' + linksHtml(p, cfg.linkWord) + "</span>" : "") +
             (p.notes && !p.rest ? '<span class="plan-notes">' + escapeHtml(p.notes) + "</span>" : "") + "</span>" +
-          (p.link && !p.rest
-            ? '<a class="icon-btn plan-link" href="' + escapeHtml(p.link) + '" target="_blank" rel="noopener" aria-label="Open link" title="' + escapeHtml(cfg.linkTitle) + '" data-stop>' + ICONS.play + "</a>"
-            : '<span class="icon-btn plan-link quiet" aria-hidden="true">' + ICONS.chevronRight + "</span>") +
+          '<span class="icon-btn plan-link quiet" aria-hidden="true">' + ICONS.chevronRight + "</span>" +
         "</li>";
       }).join("") + "</ul>" +
       '<p class="panel-note">' + cfg.footnote + "</p>" +
@@ -83,8 +82,9 @@ const renderExercise = makeWeekPlanPage({
   intro: "Tap a day to set the workout and the video you follow.",
   labelTitle: "Workout",
   labelPlaceholder: "Upper, Legs, Cardio, Push",
-  linkTitle: "Guide video",
-  linkHint: "The video you follow while training. Opens from Today.",
+  linkTitle: "Guide videos",
+  linkWord: "Video",
+  linkHint: "The videos you follow while training, one link per line. They open from Today.",
   notesPlaceholder: "Sets, weights, anything to remember",
   footnote: "The day's workout shows on Today with its video. Rest days count as done."
 });
@@ -97,8 +97,9 @@ const renderCommunication = makeWeekPlanPage({
   intro: "Tap a day to set what to practise.",
   labelTitle: "Focus",
   labelPlaceholder: "Speaking clearly, pacing, eye contact, no fillers",
-  linkTitle: "Guide",
-  linkHint: "A video or notes for this focus. Opens from Today.",
+  linkTitle: "Guides",
+  linkWord: "Guide",
+  linkHint: "Videos or notes for this focus, one link per line. They open from Today.",
   notesPlaceholder: "How you will practise it",
   footnote: "The day's focus shows on Today next to the communication tick. Rest days count as done."
 });

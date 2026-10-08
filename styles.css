@@ -943,3 +943,6 @@ strong { font-weight: 600; }
 }
 
 a.btn { text-decoration: none; }
+
+.plan-links .doc-link { margin-right: 10px; }
+.task-meta .doc-link + .doc-link { margin-left: 10px; }

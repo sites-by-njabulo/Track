@@ -206,6 +206,16 @@ function saveWeekPlan(table, weekday, fields) {
   if (row) return update(table, row.id, fields);
   return create(table, Object.assign({ weekday: weekday }, fields), weekPlanId(table, weekday));
 }
+// A plan's link field holds one URL per line. Returns the non-empty ones.
+function planLinks(p) {
+  return String(p.link || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return /^https?:\/\//i.test(s); });
+}
+function linksHtml(p, word) {
+  const links = planLinks(p);
+  return links.map(function (url, i) {
+    return '<a class="doc-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">' + escapeHtml(links.length > 1 ? word + " " + (i + 1) : word) + " " + ICONS.external + "</a>";
+  }).join(" ");
+}
 function planFor(weekday) { return weekPlanFor("exercise_plan", weekday); }
 function planToday() { return planFor(weekdayIndex(dayKey())); }
 function commPlanToday() { return weekPlanFor("comm_plan", weekdayIndex(dayKey())); }

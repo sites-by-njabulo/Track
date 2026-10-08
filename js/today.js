@@ -114,16 +114,14 @@ function checkRow(c, plan) {
   if (c.key === "exercise") {
     if (plan.rest) { label = "Rest day"; fixed = true; }
     else if (plan.label) label = "Exercise: " + plan.label;
-    if (!plan.rest && plan.link) {
-      extra = '<a class="doc-link" href="' + escapeHtml(plan.link) + '" target="_blank" rel="noopener">Guide video ' + ICONS.external + "</a>";
-    }
+    if (!plan.rest && planLinks(plan).length) extra = linksHtml(plan, "Video");
   }
   if (c.key === "blog_done") extra = '<span class="task-due">' + blogsThisWeek() + " of " + S().target_blogs + " this week</span>";
   if (c.key === "comm_done") {
     const cp = commPlanToday();
     if (cp.rest) { label = "Communication practice: rest day"; fixed = true; }
     else if (cp.label) label = "Communication practice: " + cp.label;
-    if (!cp.rest && cp.link) extra = '<a class="doc-link" href="' + escapeHtml(cp.link) + '" target="_blank" rel="noopener">Guide ' + ICONS.external + "</a>";
+    if (!cp.rest && planLinks(cp).length) extra = linksHtml(cp, "Guide");
   }
   return '<li class="task-row check-row' + (c.done ? " done" : "") + '" data-check="' + c.key + '"' + (fixed ? ' data-fixed="1"' : "") + ">" +
     '<button class="todo-check" data-toggle aria-label="' + (c.done ? "Mark as not done" : "Mark as done") + '"' + (fixed ? " disabled" : "") + ">" + (c.done ? ICONS.check : "") + "</button>" +
