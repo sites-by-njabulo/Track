@@ -932,7 +932,7 @@ strong { font-weight: 600; }
 .goal-row.settled { opacity: .55; }
 .panel-meta .doc-link { margin-left: 10px; }
 
-.sidebar { position: relative; }
+/* sticky (set in the desktop block) already positions the resize handle */
 .sidebar-resize { display: none; }
 @media (min-width: 769px) {
   .sidebar-resize { display: block; position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
