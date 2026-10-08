@@ -1,10 +1,8 @@
-// Fake data for screenshots and manual testing, built relative to today so the
-// windows (7 / 30 days, this week) always have something in them.
+// Fake data for screenshots and tests, built relative to today.
 //
-//   node tools/seed.js            prints the localStorage map as JSON
-//   node tools/shoot.js           injects it before the page loads
+//   node tools/seed.js [--gate]     prints the localStorage map as JSON
 //
-// Mirrors stableId() from js/sync.js so day rows get the same ids the app
+// Mirrors stableId() from js/sync.js so day and plan rows get the ids the app
 // would mint. Keep the two in step if either changes.
 const DAY_START_HOUR = 5;
 
@@ -34,6 +32,10 @@ function shift(k, n) {
   d.setDate(d.getDate() + n);
   return key(d);
 }
+function lastOfMonth(k) {
+  const p = k.split('-');
+  return key(new Date(+p[0], +p[1], 0));
+}
 
 let counter = 0;
 function id() { counter++; return stableId('seed:' + counter); }
@@ -46,31 +48,20 @@ function buildSeed(opts) {
   opts = opts || {};
   const t = today();
   const tasks = [
-    row({ title: 'Send proposal to Themba (plumbing site)', due: t, area: 'agency', done: false, top_date: t, notes: '' }, 2),
-    row({ title: 'Film the "3 mistakes" video', due: t, area: 'content', done: false, top_date: t }, 1),
-    row({ title: 'Maths past paper, section B', due: t, area: 'school', done: true, done_date: t, top_date: t }, 3),
+    row({ title: 'Send proposal to Themba (plumbing site)', due: t, area: 'agency', done: false, notes: '' }, 2),
     row({ title: 'Reply to Lerato about the GBP audit', due: shift(t, -1), area: 'agency', done: false }, 4),
+    row({ title: 'Maths past paper, section B', due: t, area: 'school', done: true, done_date: t }, 3),
     row({ title: 'Update portfolio with Geff site', due: shift(t, 2), area: 'agency', done: false }, 5),
     row({ title: 'Book dentist', due: null, area: 'personal', done: false }, 6),
-    row({ title: 'Write blog from "why your GBP is invisible" script', due: shift(t, 1), area: 'content', done: false }, 2),
     row({ title: 'Ask Mr Dlamini about the Friday test', due: shift(t, 3), area: 'school', done: false }, 1),
     row({ title: 'Read 10 pages', due: null, area: 'personal', done: false }, 8)
   ];
 
-  const leads = [
-    row({ name: 'Themba M', business: 'Themba Plumbing', platform: 'instagram', service: 'web', stage: 'proposal', value: 1500, notes: 'Wants it before December.', follow_up_date: t, replied_date: shift(t, -9), call_date: shift(t, -6), proposal_date: shift(t, -2) }, 9),
-    row({ name: 'Lerato K', business: 'Glow Beauty Bar', platform: 'instagram', service: 'seo', stage: 'call', value: 1000, notes: '', follow_up_date: shift(t, -1), replied_date: shift(t, -5), call_date: shift(t, -3) }, 5),
-    row({ name: 'Sipho N', business: 'Sipho Electrical', platform: 'tiktok', service: 'web', stage: 'won', value: 1200, notes: 'Deposit paid.', replied_date: shift(t, -20), call_date: shift(t, -17), proposal_date: shift(t, -15), won_date: shift(t, -12) }, 20),
-    row({ name: 'Anele D', business: 'Anele Tutoring', platform: 'instagram', service: 'web', stage: 'replied', value: 0, notes: 'Asked for prices.', follow_up_date: shift(t, 1), replied_date: shift(t, -1) }, 1),
-    row({ name: 'Mandla R', business: 'MR Roofing', platform: 'whatsapp', service: 'both', stage: 'lost', value: 2500, notes: 'Went with his cousin.', replied_date: shift(t, -14), call_date: shift(t, -11), lost_date: shift(t, -8) }, 14),
-    row({ name: 'Zinhle P', business: 'Zinhle Cleaning', platform: 'instagram', service: 'seo', stage: 'replied', value: 0, notes: '', replied_date: shift(t, -3) }, 3)
-  ];
-
   const content = [
-    row({ title: '3 mistakes plumbers make on their website', format: 'teach', stage: 'scripted', link: '', notes: '' }, 6),
-    row({ title: 'How I got my first client at 16', format: 'story', stage: 'edited', link: '', notes: '' }, 4),
-    row({ title: 'Geff site before and after', format: 'proof', stage: 'filmed', link: '', notes: '' }, 3),
-    row({ title: 'Why your Google Business Profile is invisible', format: 'teach', stage: 'posted', posted_date: t, blog_date: null }, 7),
+    row({ title: '3 mistakes plumbers make on their website', format: 'teach', stage: 'scripted' }, 6),
+    row({ title: 'How I got my first client at 16', format: 'story', stage: 'edited' }, 4),
+    row({ title: 'Geff site before and after', format: 'proof', stage: 'filmed' }, 3),
+    row({ title: 'Why your Google Business Profile is invisible', format: 'teach', stage: 'posted', posted_date: t }, 7),
     row({ title: 'A school day plus 30 cold DMs', format: 'dayinlife', stage: 'posted', posted_date: shift(t, -1), blog_date: shift(t, -1) }, 8),
     row({ title: 'Reacting to a $100 website', format: 'reaction', stage: 'scripted' }, 1),
     row({ title: 'What a $1,500 website actually includes', format: 'teach', stage: 'scripted' }, 5),
@@ -84,26 +75,47 @@ function buildSeed(opts) {
   const reasons = ['mood', 'notime', 'mood', 'notworth', 'other'];
   for (let i = 29; i >= 1; i--) {
     const k = shift(t, -i);
-    const dms = i % 5 === 0 ? 8 : (i % 3 === 0 ? 22 : 30);
     const closed = !(i === 1 && opts.gate);
+    const dms = i % 5 !== 0;
     days.push(row({
-      date: k, dms_sent: dms, comm_minutes: i % 2 ? 75 : 45, god_first: i % 4 !== 0, exercise: i % 3 === 0,
+      date: k, god_first: i % 4 !== 0, dms_done: dms, videos_done: i % 3 !== 0, comm_done: i % 2 === 0,
+      exercise: i % 3 === 0, blog_done: i % 2 === 1,
       screen_minutes: closed ? (i % 2 ? 55 : 85) : null,
       checkin_done: closed, checkin_at: closed ? new Date(Date.now() - i * 86400000).toISOString() : null,
-      dm_skip_reason: closed && dms < 30 ? reasons[i % reasons.length] : null,
+      dm_skip_reason: closed && !dms ? reasons[i % reasons.length] : null,
       better: closed ? i % 3 !== 0 : null,
-      journal: closed && i % 4 === 0 ? 'Sent the DMs before school instead of after. Easier.' : '',
-      focus_task_id: null, focus_started_at: null,
-      focus_log: i % 6 === 0 ? [{ task_id: null, title: 'Old task', started_at: null, ended_at: null, outcome: 'parked', reason: 'pulled' }] : []
+      journal: closed && i % 4 === 0 ? 'Sent the DMs before school instead of after. Easier.' : ''
     }, i, stableId('day:' + k)));
   }
   days.push(row({
-    date: t, dms_sent: 12, comm_minutes: 30, god_first: true, exercise: false, screen_minutes: null,
-    checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: '',
-    focus_task_id: opts.focus ? tasks[0].id : null,
-    focus_started_at: opts.focus ? new Date(Date.now() - 14 * 60000).toISOString() : null,
-    focus_log: []
+    date: t, god_first: true, dms_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
+    screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ''
   }, 0, stableId('day:' + t)));
+
+  const goals = [
+    row({ title: '$5,000 in client work', amount: 5000, current: 1200, deadline: lastOfMonth(t), done: false, sort: 0 }, 10),
+    row({ title: 'Post every day for 30 days', amount: 0, current: 0, deadline: shift(t, 18), done: false, sort: 1 }, 12)
+  ];
+
+  const exercise_plan = [
+    { weekday: 0, label: 'Upper', rest: false, video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
+    { weekday: 1, label: 'Legs', rest: false, video_url: 'https://www.youtube.com/watch?v=vjdlqhPM9Jc', notes: '' },
+    { weekday: 2, label: '', rest: true, video_url: '', notes: '' },
+    { weekday: 3, label: 'Push', rest: false, video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
+    { weekday: 4, label: 'Pull', rest: false, video_url: '', notes: '' },
+    { weekday: 5, label: 'Cardio', rest: false, video_url: '', notes: '20 minutes, easy pace' },
+    { weekday: 6, label: '', rest: true, video_url: '', notes: '' }
+  ].map(function (p) { return row(p, 14, stableId('plan:' + p.weekday)); });
+
+  const content_plan = [
+    { weekday: 0, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: "Film 3, post 2" },
+    { weekday: 1, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: "" },
+    { weekday: 2, do_script: false, do_film: false, do_edit: false, do_post: true,  notes: "" },
+    { weekday: 3, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: "Film 3" },
+    { weekday: 4, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: "" },
+    { weekday: 5, do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" },
+    { weekday: 6, do_script: true,  do_film: false, do_edit: false, do_post: false, notes: "Script next week" }
+  ].map(function (p) { return row(p, 14, stableId('cplan:' + p.weekday)); });
 
   const holds = [
     row({ item: 'MacBook Air', price: 1200, hold_until: shift(t, 23), status: 'holding', notes: 'For editing. The phone edits fine.' }, 7),
@@ -112,33 +124,17 @@ function buildSeed(opts) {
 
   const settings = [row({
     target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 60, target_blogs: 5,
-    goal_amount: 5000, goal_start: null, goal_end: null, weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }, default_deal_value: 1500
+    weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }
   }, 10, stableId('settings'))];
 
-  const exercises = [
-    row({ name: 'Push-ups', target: 100, unit: 'reps', sort: 0, active: true }, 20, stableId('seed:ex1')),
-    row({ name: 'Curls', target: 50, unit: 'reps', sort: 1, active: true }, 20, stableId('seed:ex2')),
-    row({ name: 'Run', target: 20, unit: 'min', sort: 2, active: true }, 20, stableId('seed:ex3')),
-    row({ name: 'Plank', target: 3, unit: 'sets', sort: 3, active: true }, 20, stableId('seed:ex4'))
-  ];
-  const exercise_logs = [];
-  for (let i = 6; i >= 0; i--) {
-    const k = shift(t, -i);
-    exercises.forEach(function (e, n) {
-      const full = (i + n) % 3 !== 0;
-      const amount = i === 0 ? (n < 2 ? e.target : Math.floor(e.target / 2)) : (full ? e.target : Math.floor(e.target * 0.6));
-      exercise_logs.push(row({ date: k, exercise_id: e.id, amount: amount }, i, stableId('ex:' + k + ':' + e.id)));
-    });
-  }
-
   return {
-    track_tasks: tasks, track_leads: leads, track_content: content, track_days: days, track_holds: holds,
-    track_exercises: exercises, track_exercise_logs: exercise_logs, track_settings: settings
+    track_tasks: tasks, track_content: content, track_days: days, track_goals: goals,
+    track_exercise_plan: exercise_plan, track_content_plan: content_plan, track_holds: holds, track_settings: settings
   };
 }
 
 module.exports = { buildSeed: buildSeed, stableId: stableId };
 
 if (require.main === module) {
-  console.log(JSON.stringify(buildSeed({ gate: process.argv.indexOf('--gate') !== -1, focus: process.argv.indexOf('--focus') !== -1 }), null, 2));
+  console.log(JSON.stringify(buildSeed({ gate: process.argv.indexOf('--gate') !== -1 }), null, 2));
 }

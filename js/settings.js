@@ -1,7 +1,7 @@
 /* ==========================================================
    15. SETTINGS
    ========================================================== */
-// Inline forms, not modals. Targets and the goal sync; theme, PIN and the
+// Inline forms, not modals. Targets and the mix sync; theme, PIN and the
 // Supabase keys are per device.
 
 function settingsField(key, label, type, value, hint, extra) {
@@ -22,12 +22,11 @@ function renderSettings() {
   const s = S();
   const theme = themeSetting();
   const mix = s.weekly_mix || {};
-  const w = goalWindow();
   const configured = supabaseConfigured();
   const sync = syncLabel();
 
   const html =
-    pageHeader("Settings", "Targets, the goal, the look, and where the data lives.") +
+    pageHeader("Settings", "Targets, the look, and where the data lives.") +
     '<div class="col settings-col">' +
 
     '<section class="panel"><div class="panel-head"><h2>Theme</h2></div>' +
@@ -37,24 +36,14 @@ function renderSettings() {
 
     '<section class="panel"><div class="panel-head"><h2>Daily targets</h2></div>' +
       '<div class="inline-fields">' +
-        settingsField("target_dms", "DMs a day", "number", s.target_dms, null, { half: true }) +
+        settingsField("target_dms", "Cold DMs a day", "number", s.target_dms, null, { half: true }) +
         settingsField("target_videos", "Videos posted a day", "number", s.target_videos, null, { half: true }) +
         settingsField("target_comm", "Communication practice, minutes", "number", s.target_comm, null, { half: true }) +
         settingsField("screen_cap", "Screen time cap, minutes", "number", s.screen_cap, null, { half: true }) +
         settingsField("target_blogs", "Blog posts a week", "number", s.target_blogs, null, { half: true }) +
-        settingsField("default_deal_value", "Average client value, USD", "number", s.default_deal_value,
-          "Used for the on-hold maths until real won deals exist.", { half: true }) +
       "</div>" +
       '<div class="inline-actions"><button class="btn btn-primary" id="save-targets">Save targets</button></div>' +
-    "</section>" +
-
-    '<section class="panel"><div class="panel-head"><h2>Goal</h2></div>' +
-      '<div class="inline-fields">' +
-        settingsField("goal_amount", "Amount, USD", "number", s.goal_amount, null, { half: true }) +
-        settingsField("goal_end", "Deadline", "date", s.goal_end || w.end, null, { half: true }) +
-        settingsField("goal_start", "Counting from", "date", s.goal_start || w.start, "Won deals dated inside this window count.", { half: true }) +
-      "</div>" +
-      '<div class="inline-actions"><button class="btn btn-primary" id="save-goal">Save goal</button></div>' +
+      '<p class="panel-note">These only change the wording of the to-do list. Each item is a tick, done or not done.</p>' +
     "</section>" +
 
     '<section class="panel"><div class="panel-head"><h2>Weekly video mix</h2><span class="panel-meta">' + weekTargetTotal() + " a week</span></div>" +
@@ -62,7 +51,7 @@ function renderSettings() {
         return settingsField("mix_" + f.value, f.label, "number", num(mix[f.value]) || 0, null, { half: true });
       }).join("") + "</div>" +
       '<div class="inline-actions"><button class="btn btn-primary" id="save-mix">Save mix</button></div>' +
-      '<p class="panel-note">How many of each kind to post per week. Zero hides a format. The Content page and the Today card are built from this, so the question of what kind of video to make is answered here, once.</p>' +
+      '<p class="panel-note">How many of each kind to post per week. Zero hides a format. The Content page and the Today card are built from this.</p>' +
     "</section>" +
 
     '<section class="panel"><div class="panel-head"><h2>PIN</h2>' + (pinIsDefault() ? '<span class="pill tone-warn">Still 0000</span>' : "") + "</div>" +
@@ -124,19 +113,9 @@ function wireSettings() {
       target_videos: Math.max(0, Math.round(readSettingNumber("target_videos"))),
       target_comm: Math.max(0, Math.round(readSettingNumber("target_comm"))),
       screen_cap: Math.max(0, Math.round(readSettingNumber("screen_cap"))),
-      target_blogs: Math.max(0, Math.round(readSettingNumber("target_blogs"))),
-      default_deal_value: Math.max(0, readSettingNumber("default_deal_value"))
+      target_blogs: Math.max(0, Math.round(readSettingNumber("target_blogs")))
     });
     toast("Targets saved");
-  });
-
-  page.querySelector("#save-goal").addEventListener("click", function () {
-    saveSettings({
-      goal_amount: Math.max(0, readSettingNumber("goal_amount")),
-      goal_start: readSettingText("goal_start") || null,
-      goal_end: readSettingText("goal_end") || null
-    });
-    toast("Goal saved");
   });
 
   page.querySelector("#save-mix").addEventListener("click", function () {

@@ -860,3 +860,56 @@ strong { font-weight: 600; }
   .task-row .task-star { opacity: 1; }
   .task-right > .icon-btn + .icon-btn { margin-top: 0; margin-right: 0; }
 }
+
+
+/* ===========================================================
+   Simplified Today: goals, plans
+   =========================================================== */
+.goal-list { display: flex; flex-direction: column; }
+.goal-row { padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.goal-row:hover { background: var(--surface-2); }
+.goal-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.goal-title { font-size: 14px; font-weight: 600; }
+.goal-when { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.goal-row-figs { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+.goal-row .goal-track { margin-top: 8px; }
+
+.plan-list { display: flex; flex-direction: column; }
+.plan-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.plan-row:hover { background: var(--surface-2); }
+.plan-list.compact .plan-row { min-height: 42px; padding: 4px 0; }
+.plan-day { width: 110px; flex-shrink: 0; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.plan-list.compact .plan-day { width: 70px; }
+.plan-today { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
+.plan-row.today .plan-today { color: var(--good); }
+.plan-label { flex: 1; min-width: 0; font-size: 14px; }
+.plan-row.rest .plan-label { color: var(--text-3); }
+.plan-row.unset .plan-label { color: var(--text-3); font-style: normal; }
+.plan-link { flex-shrink: 0; }
+.plan-link.quiet { color: var(--text-3); pointer-events: none; }
+.plan-row.today { background: var(--surface-2); margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
+
+.check-row .task-body { cursor: default; }
+.check-row.done .task-title { text-decoration: none; color: var(--text-3); }
+.check-row .todo-check:disabled { opacity: 1; background: var(--good); border-color: var(--good); color: #fff; cursor: default; }
+.content-today { font-size: 14px; padding: 12px 0; }
+.content-today.quiet { color: var(--text-2); }
+.content-today-plan { font-size: 14px; font-weight: 600; padding: 12px 0 0; }
+.tick-cell { text-align: center; }
+.tick { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-2); color: transparent; vertical-align: middle; }
+.tick.on { background: var(--good); border-color: var(--good); color: #fff; }
+.tick svg { width: 9px; height: 9px; }
+
+.act-chip { display: inline-flex; align-items: center; padding: 1px 7px; margin-right: 4px; border-radius: var(--r-xs); background: var(--surface-3); font-size: 12px; font-weight: 600; }
+.plan-row.today .act-chip { background: var(--accent); color: var(--accent-fg); }
+.plan-notes { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.act-list { display: flex; flex-direction: column; }
+.act-list .next-line { border-bottom: 1px solid var(--border); }
+.act-list .next-line:last-child { border-bottom: none; }
+.next-what.quiet { color: var(--text-3); font-weight: 400; }
+.act-list .next-line, .next-card .next-line { padding: 10px 0; gap: 10px; }
+.next-line .btn { margin-left: auto; }
+.next-week { margin-left: 6px; }
+@media (max-width: 599px) { .topbar-title { font-size: 22px; } }
+.next-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
+.next-line .next-what { flex: 1 1 200px; min-width: 0; }

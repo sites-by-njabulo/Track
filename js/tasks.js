@@ -2,12 +2,11 @@
    9. TASKS
    ========================================================== */
 // Todoist-shaped: a big title, a count line, date group headers, plain rows,
-// and a "+ Add task" row at the bottom that types inline. Module state is
-// prefixed with the section name because every file shares one scope.
+// and a "+ Add task" row at the bottom that types inline.
 
 let tasksView = "today";      // today | upcoming | inbox
 let tasksShowDone = false;
-let tasksAdding = false;      // the inline add row is open
+let tasksAdding = false;
 
 const TASK_FIELDS = [
   { key: "title", label: "Task",  type: "text", required: true, autofocus: true, placeholder: "What needs doing" },
@@ -17,7 +16,7 @@ const TASK_FIELDS = [
 ];
 
 // "Send proposal to Themba fri" -> title "Send proposal to Themba", due next
-// Friday. A trailing word only, so a task about "tomorrow's call" is safe.
+// Friday. A trailing word only.
 function parseQuickAdd(text) {
   const rel = { today: 0, tod: 0, tomorrow: 1, tmrw: 1, tom: 1 };
   const dows = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
@@ -40,8 +39,8 @@ function tasksBuckets() {
   const t = dayKey();
   const open = openTasks();
   return {
-    inbox: open.filter(function (x) { return !x.due && x.top_date !== t; }),
-    today: open.filter(function (x) { return (x.due && x.due <= t) || x.top_date === t; }),
+    inbox: open.filter(function (x) { return !x.due; }),
+    today: open.filter(function (x) { return x.due && x.due <= t; }),
     upcoming: open.filter(function (x) { return x.due && x.due > t; })
   };
 }
@@ -56,11 +55,9 @@ function taskSort(a, b) {
 function dateGroupLabel(key) {
   const d = parseKey(key);
   const rel = relativeDayLabel(key);
-  const md = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const wd = d.toLocaleDateString("en-US", { weekday: "long" });
-  const parts = [md];
+  const parts = [d.toLocaleDateString("en-US", { month: "short", day: "numeric" })];
   if (rel === "Today" || rel === "Tomorrow") parts.push(rel);
-  parts.push(wd);
+  parts.push(d.toLocaleDateString("en-US", { weekday: "long" }));
   return parts.join(" · ");
 }
 
@@ -77,11 +74,8 @@ function renderTasks() {
     count = rows.length;
     body = rows.length ? taskList(rows, t) : "";
   } else if (tasksView === "today") {
-    const overdue = b.today.filter(function (x) { return x.due && x.due < t; }).sort(taskSort);
-    const due = b.today.filter(function (x) { return !(x.due && x.due < t); }).sort(function (a, c) {
-      const at = a.top_date === t ? 0 : 1, ct = c.top_date === t ? 0 : 1;
-      return at !== ct ? at - ct : taskSort(a, c);
-    });
+    const overdue = b.today.filter(function (x) { return x.due < t; }).sort(taskSort);
+    const due = b.today.filter(function (x) { return x.due === t; }).sort(taskSort);
     count = overdue.length + due.length;
     body = (overdue.length ? '<p class="group-label">Overdue</p>' + taskList(overdue, t) : "") +
            '<p class="group-label">' + escapeHtml(dateGroupLabel(t)) + "</p>" +
@@ -120,11 +114,10 @@ function renderTasks() {
         { value: "inbox", label: "Inbox", count: b.inbox.length }
       ], tasksView) + "</div>") +
     '<div class="col">' +
-      body +
-      addRow +
+      body + addRow +
       (count === 0 && !tasksAdding
         ? '<p class="panel-empty-text">' +
-            (tasksView === "today" ? "Nothing due today. Star something from the Inbox or add a task."
+            (tasksView === "today" ? "Nothing due today."
              : tasksView === "upcoming" ? "Nothing scheduled. End a task with tomorrow, a weekday, or next week."
              : "Inbox is empty. Anything without a date lands here.") + "</p>"
         : "") +
@@ -144,26 +137,19 @@ function taskList(rows, t) {
   return '<ul class="task-list">' + rows.map(function (x) { return taskRow(x, t); }).join("") + "</ul>";
 }
 
+// Shared with Today, so a task looks the same everywhere.
 function taskRow(x, t) {
-  const top = x.top_date === t;
   const overdue = x.due && x.due < t && !x.done;
-  const meta = [];
-  if (x.due && (tasksView !== "upcoming" || x.done)) {
-    meta.push('<span class="' + (overdue ? "cell-overdue" : "task-due") + '">' + ICONS.calendar + escapeHtml(relativeDayLabel(x.due)) + "</span>");
-  }
-  if (top && !x.done) meta.push('<span class="task-top-mark">' + ICONS.starFill + "Top 3</span>");
-  return '<li class="task-row' + (x.done ? " done" : "") + (top ? " top" : "") + '" data-id="' + x.id + '">' +
+  const showDate = x.due && (currentSectionName !== "tasks" || tasksView !== "upcoming" || x.done);
+  return '<li class="task-row' + (x.done ? " done" : "") + '" data-id="' + x.id + '">' +
     '<button class="todo-check" data-toggle aria-label="' + (x.done ? "Mark as not done" : "Mark as done") + '">' + (x.done ? ICONS.check : "") + "</button>" +
     '<div class="task-body" data-edit tabindex="0">' +
       '<span class="task-title">' + escapeHtml(x.title) + "</span>" +
-      (meta.length ? '<span class="task-meta">' + meta.join("") + "</span>" : "") +
+      (showDate ? '<span class="task-meta"><span class="' + (overdue ? "cell-overdue" : "task-due") + '">' + ICONS.calendar + escapeHtml(relativeDayLabel(x.due)) + "</span></span>" : "") +
     "</div>" +
     '<span class="task-right">' +
-      (x.done ? "" :
-        '<button class="icon-btn task-star' + (top ? " on" : "") + '" data-star aria-label="' + (top ? "Remove from Top 3" : "Make a Top 3 for today") + '">' +
-          (top ? ICONS.starFill : ICONS.star) + "</button>") +
       '<button class="icon-btn task-delete" data-delete aria-label="Delete task">' + ICONS.trash + "</button>" +
-      '<span class="task-area">' + escapeHtml(lookup(TASK_AREAS, x.area).label === "No area" ? "Inbox" : lookup(TASK_AREAS, x.area).label) + "</span>" +
+      '<span class="task-area">' + escapeHtml(x.area ? lookup(TASK_AREAS, x.area).label : "Inbox") + "</span>" +
     "</span>" +
   "</li>";
 }
@@ -181,32 +167,8 @@ function addTaskFromInput(input) {
   if (fresh) fresh.focus();
 }
 
-// Star = Top 3 for the given day. The 4th star is refused, and so is starring
-// while yesterday is still open: the gate is the point.
-function toggleTop(id, key) {
-  const x = byId("tasks", id);
-  if (!x) return false;
-  if (x.top_date === key) { update("tasks", id, { top_date: null }); return true; }
-  if (typeof gateDayKey === "function" && gateDayKey() && key === dayKey()) {
-    toast("Close yesterday first. Then pick today's three.");
-    return false;
-  }
-  if (topTasksFor(key).length >= TOP_LIMIT) {
-    toast("Top 3 is full. Unstar one first.");
-    return false;
-  }
-  update("tasks", id, { top_date: key });
-  return true;
-}
-
 function setTaskDone(id, done) {
-  const fields = { done: done, done_date: done ? dayKey() : null };
-  update("tasks", id, fields);
-  // Finishing the task that is in focus ends the block cleanly.
-  if (done && typeof activeFocus === "function") {
-    const f = activeFocus();
-    if (f && f.row.focus_task_id === id && typeof endFocus === "function") endFocus("finished", null, true);
-  }
+  update("tasks", id, { done: done, done_date: done ? dayKey() : null });
 }
 
 function openTaskForm(id, preset) {
@@ -257,9 +219,9 @@ function wireTasks() {
   wireTaskRows(page, renderTasks);
 }
 
-// Shared by the Tasks page and the Top 3 list on Today.
+// Shared by the Tasks page and the to-do list on Today.
 function wireTaskRows(root, rerender) {
-  root.querySelectorAll(".task-row").forEach(function (li) {
+  root.querySelectorAll(".task-row[data-id]").forEach(function (li) {
     const id = li.dataset.id;
     const toggle = li.querySelector("[data-toggle]");
     if (toggle) toggle.addEventListener("click", function () {
@@ -270,10 +232,6 @@ function wireTaskRows(root, rerender) {
     const del = li.querySelector("[data-delete]");
     if (del) del.addEventListener("click", function () {
       confirmDelete("this task", function () { remove("tasks", id); rerender(); });
-    });
-    const star = li.querySelector("[data-star]");
-    if (star) star.addEventListener("click", function () {
-      if (toggleTop(id, dayKey())) rerender();
     });
     const editEl = li.querySelector("[data-edit]");
     if (editEl) {

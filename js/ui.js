@@ -7,7 +7,6 @@
 const SECTIONS = [
   { name: "today",    label: "Today",    icon: "today" },
   { name: "tasks",    label: "Tasks",    icon: "tasks" },
-  { name: "pipeline", label: "Pipeline", icon: "pipeline" },
   { name: "content",  label: "Content",  icon: "content" },
   { name: "exercise", label: "Exercise", icon: "exercise" },
   { name: "review",   label: "Review",   icon: "review" },
@@ -15,7 +14,7 @@ const SECTIONS = [
 ];
 
 // The four that earn a spot in the mobile bottom bar, plus "More".
-const MOBILE_PRIMARY = ["today", "tasks", "pipeline", "content"];
+const MOBILE_PRIMARY = ["today", "tasks", "content", "exercise"];
 
 let currentSectionName = "today";
 
@@ -39,7 +38,6 @@ function renderSection(name) {
   switch (name) {
     case "today":    renderToday();    break;
     case "tasks":    renderTasks();    break;
-    case "pipeline": renderPipeline(); break;
     case "content":  renderContent();  break;
     case "exercise": renderExercise(); break;
     case "review":   renderReview();   break;
@@ -47,14 +45,8 @@ function renderSection(name) {
   }
 }
 
-// One badge only: follow-ups due on Pipeline. A badge on every item is
-// wallpaper; a badge on one item is a prompt.
+// Quiet counts beside the nav items, Todoist-style.
 function updateNavBadges() {
-  const due = typeof followUpsDue === "function" ? followUpsDue().length : 0;
-  document.querySelectorAll('[data-badge="pipeline"]').forEach(function (el) {
-    el.textContent = due;
-    el.classList.toggle("hidden", due === 0);
-  });
   const counts = navCounts();
   document.querySelectorAll("[data-count]").forEach(function (el) {
     const n = counts[el.dataset.count] || 0;
@@ -62,18 +54,13 @@ function updateNavBadges() {
   });
 }
 
-// Counts beside the nav items, Todoist-style: a quiet number, except the
-// one that is actually late (follow-ups), which is red.
 function navCounts() {
   if (typeof dayKey !== "function") return {};
   const t = dayKey();
-  const open = db.tasks.filter(function (x) { return !x.done; });
-  const ex = typeof exerciseStatus === "function" ? exerciseStatus(t) : null;
   return {
-    today: topTasksFor(t).filter(function (x) { return !x.done; }).length,
-    tasks: open.filter(function (x) { return (x.due && x.due <= t) || x.top_date === t; }).length,
-    content: typeof weekTargetTotal === "function" && weekTargetTotal() ? Math.max(0, weekTargetTotal() - postedThisWeek()) : 0,
-    exercise: ex ? ex.total - ex.done : 0
+    today: checksFor(t).length - checksDone(t) + tasksDueOn(t).length,
+    tasks: tasksDueOn(t).length,
+    content: typeof weekTargetTotal === "function" && weekTargetTotal() ? Math.max(0, weekTargetTotal() - postedThisWeek()) : 0
   };
 }
 
@@ -81,9 +68,7 @@ function navItem(s, extraClass) {
   return '<button class="nav-item ' + (extraClass || "") + '" data-section="' + s.name + '" aria-label="' + s.label + '">' +
            '<span class="nav-icon">' + ICONS[s.icon] + "</span>" +
            '<span class="nav-label">' + s.label + "</span>" +
-           (s.name === "pipeline"
-             ? '<span class="nav-badge hidden" data-badge="pipeline"></span>'
-             : '<span class="nav-count" data-count="' + s.name + '"></span>') +
+           '<span class="nav-count" data-count="' + s.name + '"></span>' +
          "</button>";
 }
 

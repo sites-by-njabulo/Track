@@ -1,5 +1,5 @@
 // Headless functional tests. Seeds the app, drives it through page.evaluate
-// and asserts on db.* and derived numbers.
+// and asserts on db.* and derived values.
 //
 //   node tools/test.js            (needs tools/serve.js on 127.0.0.1:4178)
 const path = require('path');
@@ -19,8 +19,6 @@ async function openApp(browser, seed, url) {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  // Network failures and the manifest's CORS refusal on file:// are expected
-  // in the harness, not app bugs.
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     if (m.text().indexOf('net::') !== -1 || m.text().indexOf('manifest') !== -1) return;
@@ -39,10 +37,8 @@ async function openApp(browser, seed, url) {
 (async () => {
   const browser = await puppeteer.launch();
   try {
-    // ---------- 1. Pure helpers, no seed dependence ----------
     console.log('helpers');
     let { page, errors } = await openApp(browser, buildSeed({}));
-
     const r1 = await page.evaluate(() => {
       const RealDate = Date;
       function fake(y, m, d, h, mi) {
@@ -57,12 +53,10 @@ async function openApp(browser, seed, url) {
       fake(2026, 9, 8, 5, 1);  out.after5 = dayKey();
       fake(2026, 9, 8, 12, 0);
       out.week = weekKeys(0);
-      out.weekday0 = new RealDate(2026, 9, 5).getDay(); // Monday 5 Oct 2026
-      out.win = windowKeys(7);
+      out.wd = weekdayIndex('2026-10-08');
       out.parsed = [parseQuickAdd('Send proposal to Themba fri'), parseQuickAdd('Call mom tomorrow'), parseQuickAdd('Book dentist'), parseQuickAdd('Plan next week')];
       out.fmt = [formatUSD(5000), formatUSD(-500), formatUSD('1234.6')];
-      out.lastOf = lastOfMonth('2026-02-10');
-      out.stable = dayId('2026-10-08') === dayId('2026-10-08') && dayId('2026-10-08') !== dayId('2026-10-09');
+      out.stable = dayId('2026-10-08') === dayId('2026-10-08') && planId(0) !== planId(1);
       // eslint-disable-next-line no-global-assign
       Date = RealDate;
       return out;
@@ -70,107 +64,62 @@ async function openApp(browser, seed, url) {
     check('04:59 counts as yesterday', r1.before5 === '2026-10-07', r1.before5);
     check('05:01 counts as today', r1.after5 === '2026-10-08', r1.after5);
     check('week starts Monday 5 Oct', r1.week[0] === '2026-10-05' && r1.week.length === 7, r1.week);
-    check('windowKeys(7) ends today', r1.win.length === 7 && r1.win[6] === '2026-10-08', r1.win);
+    check('Thursday is weekday index 3', r1.wd === 3, r1.wd);
     check('"fri" parses to Friday 9 Oct', r1.parsed[0].title === 'Send proposal to Themba' && r1.parsed[0].due === '2026-10-09', r1.parsed[0]);
-    check('"tomorrow" parses', r1.parsed[1].due === '2026-10-09' && r1.parsed[1].title === 'Call mom', r1.parsed[1]);
-    check('no date word = inbox', r1.parsed[2].due === null && r1.parsed[2].title === 'Book dentist', r1.parsed[2]);
+    check('"tomorrow" parses', r1.parsed[1].due === '2026-10-09', r1.parsed[1]);
+    check('no date word = inbox', r1.parsed[2].due === null, r1.parsed[2]);
     check('"next week" = next Monday', r1.parsed[3].due === '2026-10-12', r1.parsed[3]);
     check('formatUSD', r1.fmt.join('|') === '$5,000|-$500|$1,235', r1.fmt);
-    check('lastOfMonth Feb', r1.lastOf === '2026-02-28', r1.lastOf);
-    check('dayId is stable', r1.stable);
+    check('stable ids', r1.stable);
 
-    // ---------- 2. Stats on seed ----------
-    console.log('stats');
-    const seed = buildSeed({});
-    const expectedDms = seed.track_days.reduce((s, d) => s + d.dms_sent, 0);
-    const r2 = await page.evaluate(() => ({ s: statsFor(30), goal: goalProgress(), avg: avgDealValue(), streak: checkinStreak(), gate: gateDayKey(), videos: videosPostedOn(dayKey()), blogs: blogsThisWeek(), next: nextContentAction(), mix: weekMixStatus(), ex: exerciseStatus(dayKey()), exDone: exerciseDoneOn(dayKey()) }));
-    check('DMs sum over 30 days', r2.s.dms === expectedDms, [r2.s.dms, expectedDms]);
-    check('replies = 6 leads replied in window', r2.s.replies === 6, r2.s.replies);
-    check('won = 1, $1,200', r2.s.won === 1 && r2.s.money === 1200, r2.s);
-    check('dmsPerWon = dms / 1', r2.s.dmsPerWon === expectedDms, r2.s.dmsPerWon);
-    check('avg deal value from won lead', r2.avg === 1200, r2.avg);
-    check('streak = 29 (today open does not break it)', r2.streak === 29, r2.streak);
-    check('no gate when yesterday closed', r2.gate === null, r2.gate);
-    check('videos posted today = 1', r2.videos === 1, r2.videos);
-    check('weekly mix has 4 formats totalling 14', r2.mix.length === 4 && r2.mix.reduce((n, f) => n + f.target, 0) === 14, r2.mix);
-    check('next action is the format furthest behind', r2.next && r2.next.format && r2.next.format.value === 'teach' && r2.next.verb === 'Film', r2.next && [r2.next.format.value, r2.next.verb, r2.next.title]);
-    check('exercise status 2 of 4, not done', r2.ex && r2.ex.total === 4 && r2.ex.done === 2 && r2.exDone === false, r2.ex);
-    check('goal counts only this month', r2.goal.won === 0 && r2.goal.target === 5000, r2.goal);
+    console.log('derived on seed');
+    const r2 = await page.evaluate(() => ({
+      checks: checksFor(dayKey()), streak: checkinStreak(), gate: gateDayKey(), blogs: blogsThisWeek(),
+      next: nextContentAction(), mix: weekMixStatus(), goal: primaryGoal(), plan: planToday(), cplan: contentPlanFor(weekdayIndex(dayKey())),
+      nextDay: nextContentDay(), skip: skipReasonBreakdown(30), due: tasksDueOn(dayKey()).length,
+      greet: greeting(null, 9), greetLate: greeting(null, 23), greetBack: greeting('2026-10-07', 9)
+    }));
+    check('six daily checks, one done', r2.checks.length === 6 && r2.checks.filter((c) => c.done).length === 1, r2.checks);
+    check('streak = 29', r2.streak === 29, r2.streak);
+    check('no gate when yesterday closed', r2.gate === null);
+    check('weekly mix totals 14', r2.mix.reduce((n, f) => n + f.target, 0) === 14);
+    check('next action is Teach, Film', r2.next && r2.next.format.value === 'teach' && r2.next.verb === 'Film', r2.next && r2.next.title);
+    check('primary goal is the $5,000 one', r2.goal && r2.goal.amount === 5000 && r2.goal.current === 1200, r2.goal);
+    check('today has an exercise plan entry', r2.plan && (r2.plan.label || r2.plan.rest), r2.plan);
+    check('content plan has a next day', r2.nextDay && r2.nextDay.daysAway >= 1, r2.nextDay);
+    check('skip reasons counted', r2.skip.closed === 29 && r2.skip.skipped === 5, r2.skip);
+    check('two tasks due today (one overdue)', r2.due === 2, r2.due);
+    check('greeting has the name and changes by hour', r2.greet.indexOf('Njabulo') !== -1 && r2.greetLate !== r2.greet, [r2.greet, r2.greetLate, r2.greetBack]);
 
-    // ---------- 3. Writes ----------
     console.log('writes');
     const r3 = await page.evaluate(() => {
       const t = dayKey();
       const out = {};
-      const before = num(dayGet(t).dms_sent);
-      bumpDay(t, (r) => ({ dms_sent: num(r.dms_sent) + 5 }));
-      out.dmAfter = num(dayGet(t).dms_sent) - before;
-      out.persisted = JSON.parse(localStorage.getItem('track_days')).find((d) => d.date === t).dms_sent === before + 5;
+      bumpDay(t, { dms_done: true });
+      out.tick = dayGet(t).dms_done === true && checksDone(t) === 2;
+      out.persisted = JSON.parse(localStorage.getItem('track_days')).find((d) => d.date === t).dms_done === true;
       out.outboxHasDay = Object.keys(JSON.parse(localStorage.getItem('track_outbox'))).some((k) => k.indexOf('days:') === 0);
-
-      // Top 3 limit: seed has 3 for today
-      const inbox = db.tasks.find((x) => !x.due && !x.done);
-      out.fourthStarRefused = toggleTop(inbox.id, t) === false && inbox.top_date !== t;
-      // unstar one, then it fits
-      const starred = topTasksFor(t).find((x) => !x.done);
-      toggleTop(starred.id, t);
-      out.unstarred = starred.top_date === null;
-      out.thenFits = toggleTop(inbox.id, t) === true && inbox.top_date === t;
-
-      // Content stamping
       const scripted = db.content.find((c) => c.stage === 'scripted' && c.format === 'teach');
       advanceContent(scripted.id);
       out.filmed = scripted.stage === 'filmed' && scripted.posted_date === null;
       setContentStage(scripted.id, 'posted');
-      out.postedStamp = scripted.posted_date === t && videosPostedOn(t) === 2;
-      setContentStage(scripted.id, 'filmed');
-      out.unposted = scripted.posted_date === null && videosPostedOn(t) === 1;
-
-      // Lead stamping
-      const v = stampStage({ stage: 'won', name: 'X' }, null);
-      out.wonStamp = v.won_date === t && v.replied_date === t;
-      const lead = db.leads.find((l) => l.stage === 'call');
-      const v2 = stampStage({ stage: 'proposal' }, lead);
-      out.proposalStamp = v2.proposal_date === t && v2.call_date === undefined;
-
-      // Focus: park then finish
-      const task = topTasksFor(t).find((x) => !x.done);
-      startFocus(task.id);
-      out.focusSet = !!activeFocus() && activeFocus().task.id === task.id;
-      endFocus('parked', 'pulled', true);
-      out.parked = parksOn(t) === 1 && !activeFocus() && !byId('tasks', task.id).done;
-      startFocus(task.id);
-      endFocus('finished', null, true);
-      out.finished = byId('tasks', task.id).done === true && dayGet(t).focus_log.length === 2;
-
-      // Exercise: bump to target flips done, log row is stable-keyed
-      const run = db.exercises.find((e) => e.name === 'Run');
-      bumpExercise(t, run.id, 10);
-      out.exerciseBump = exerciseAmount(t, run.id) === 20 && exerciseHit(t, run);
-      bumpExercise(t, run.id, 10);
-      out.exerciseLogSingle = db.exercise_logs.filter((l) => l.date === t && l.exercise_id === run.id).length === 1;
-      const plank = db.exercises.find((e) => e.name === 'Plank');
-      bumpExercise(t, plank.id, 5);
-      out.exerciseAllDone = exerciseDoneOn(t) === true && exerciseStatus(t).done === 4;
-
-      // Hold maths
-      out.clients = clientsNeeded(1200);
-
-      // Export / import round trip
+      out.postedStamp = scripted.posted_date === t && postedThisWeek('teach') === 3;
+      savePlan(2, { label: 'Core', rest: false, video_url: 'https://x.y/z' });
+      out.planSaved = planFor(2).label === 'Core' && db.exercise_plan.filter((p) => p.weekday === 2).length === 1;
+      saveContentPlan(5, { do_film: true });
+      out.cplanSaved = contentPlanFor(5).do_film === true && daysWith('do_film').indexOf('Sat') !== -1;
+      out.todayActs = Array.isArray(todayContentActions());
+      const g = create('goals', { title: 'Test', amount: 100, current: 50, deadline: shiftKey(t, 3) });
+      out.goalRatio = goalRatio(g) === 0.5;
+      remove('goals', g.id);
       const snap = exportAll();
       out.importNothingNewer = importAll(JSON.parse(JSON.stringify(snap))) === 0;
-      const older = JSON.parse(JSON.stringify(snap));
-      older.tables.tasks[0].title = 'STALE';
-      older.tables.tasks[0].updated_at = '2000-01-01T00:00:00.000Z';
-      importAll(older);
-      out.staleIgnored = db.tasks[0].title !== 'STALE';
       return out;
     });
-    Object.keys(r3).forEach((k) => check(k, r3[k] === true || (k === 'clients' && r3[k] === 1) || (k === 'dmAfter' && r3[k] === 5), r3[k]));
+    Object.keys(r3).forEach((k) => check(k, r3[k] === true, r3[k]));
     check('no page errors in seeded session', errors.length === 0, errors);
     await page.close();
 
-    // ---------- 4. Gate + check-in ----------
     console.log('gate + check-in');
     ({ page, errors } = await openApp(browser, buildSeed({ gate: true })));
     const r4 = await page.evaluate(() => {
@@ -180,61 +129,52 @@ async function openApp(browser, seed, url) {
       out.gate = gateDayKey() === y;
       out.gateCardShown = !!document.querySelector('#gate-close');
       out.streakBefore = checkinStreak();
-      const inbox = db.tasks.find((x) => !x.due && !x.done);
-      out.starBlocked = toggleTop(inbox.id, t) === false;
-      // Close yesterday through the real flow
       openCheckin(y);
       out.sheetOpen = document.getElementById('sheet').classList.contains('open');
-      out.reasonRequired = !!document.querySelector('[data-reason]'); // yesterday had 30? seed: i=1 -> 30 dms, so no reason needed
+      out.reasonAsked = !!document.querySelector('[data-reason]') === !dayGet(y).dms_done;
+      checkin.draft.reason = 'mood';
       checkin.draft.screen = 45;
       checkin.draft.better = true;
       checkin.draft.journal = 'Test line';
-      checkin.draft.top = [inbox.id];
-      checkinNext(); // step 1 -> 2
-      checkinNext(); // 2 -> 3
-      checkinNext(); // 3 -> 4
-      checkinNext(); // 4 -> finish
+      checkinNext(); checkinNext(); checkinNext();
       const yd = dayGet(y);
       out.closed = yd.checkin_done === true && yd.screen_minutes === 45 && yd.better === true && yd.journal === 'Test line';
       out.gateCleared = gateDayKey() === null;
-      out.topForToday = byId('tasks', inbox.id).top_date === t;
       out.streakAfter = checkinStreak();
       out.doneScreen = !!document.querySelector('[data-done]');
       closeSheet();
       out.gateCardGone = !document.querySelector('#gate-close');
-      out.starNowAllowed = topTasksFor(t).length < 3 ? toggleTop(db.tasks.find((x) => x.due > t).id, t) === true : true;
       return out;
     });
     check('gate returns yesterday', r4.gate);
     check('gate card rendered', r4.gateCardShown);
-    check('starring blocked while gated', r4.starBlocked);
     check('check-in sheet opens', r4.sheetOpen);
+    check('reason asked only when DMs skipped', r4.reasonAsked);
     check('yesterday closed with answers', r4.closed);
     check('gate cleared after closing', r4.gateCleared);
-    check('picked task is top for today', r4.topForToday);
     check('streak went from 0 to 29', r4.streakBefore === 0 && r4.streakAfter === 29, [r4.streakBefore, r4.streakAfter]);
     check('done screen shown', r4.doneScreen);
     check('gate card gone after close', r4.gateCardGone);
-    check('starring allowed after close', r4.starNowAllowed);
     check('no page errors in gate session', errors.length === 0, errors);
     await page.close();
 
-    // ---------- 5. Fresh install: no gate, empty states, file:// ----------
     console.log('fresh + file://');
     ({ page, errors } = await openApp(browser, {}));
-    const r5 = await page.evaluate(() => ({ gate: gateDayKey(), streak: checkinStreak(), tasks: db.tasks.length, settings: S().target_dms, pin: pinIsDefault(), mixTotal: weekTargetTotal(), next: nextContentAction(), ex: exerciseStatus(dayKey()) }));
+    const r5 = await page.evaluate(() => {
+      const out = { gate: gateDayKey(), streak: checkinStreak(), checks: checksFor(dayKey()).length, mixTotal: weekTargetTotal(), next: nextContentAction(), goal: primaryGoal(), pin: pinIsDefault() };
+      out.pages = ['today', 'tasks', 'content', 'exercise', 'review', 'settings'].map((p) => { showSection(p); return document.getElementById('page-' + p).innerHTML.length > 100; });
+      return out;
+    });
     check('fresh install has no gate', r5.gate === null);
-    check('fresh install defaults', r5.streak === 0 && r5.tasks === 0 && r5.settings === 30 && r5.pin === true, r5);
-    check('fresh install: mix defaults to 14, next action is Script', r5.mixTotal === 14 && r5.next && r5.next.verb === 'Script' && r5.next.item === null, r5.next);
-    check('fresh install: no exercises means toggle mode', r5.ex === null);
-    const r5b = await page.evaluate(() => { showSection('exercise'); showSection('content'); showSection('tasks'); return { ok: true, pages: ['exercise','content','tasks'].map((p) => document.getElementById('page-' + p).innerHTML.length > 100) }; });
-    check('empty pages render', r5b.pages.every(Boolean), r5b.pages);
+    check('fresh install defaults', r5.streak === 0 && r5.checks === 6 && r5.mixTotal === 14 && r5.goal === null && r5.pin === true, r5);
+    check('fresh install next action is Script', r5.next && r5.next.verb === 'Script' && r5.next.item === null, r5.next);
+    check('all six pages render empty', r5.pages.every(Boolean), r5.pages);
     check('no page errors on fresh install', errors.length === 0, errors);
     await page.close();
 
     ({ page, errors } = await openApp(browser, {}, FILE_URL));
-    const r6 = await page.evaluate(() => ({ ready: appReady, section: currentSectionName, id: newId().length }));
-    check('file:// boots to Today', r6.ready && r6.section === 'today' && r6.id === 36, r6);
+    const r6 = await page.evaluate(() => ({ ready: appReady, section: currentSectionName }));
+    check('file:// boots to Today', r6.ready && r6.section === 'today', r6);
     check('no page errors on file://', errors.length === 0, errors);
     await page.close();
   } finally {

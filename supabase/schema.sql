@@ -20,15 +20,11 @@
 
 create extension if not exists pgcrypto;
 
--- The server's clock, so a device whose clock is slow does not have every
--- edit silently rejected by the trigger below.
 create or replace function public.server_now() returns timestamptz
   language sql stable as $$ select now() $$;
 
 
--- ===========================================================
 -- 1. TASKS
--- ===========================================================
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
@@ -37,50 +33,14 @@ create table if not exists public.tasks (
   area text not null default '',           -- ''|agency|content|school|personal
   done boolean not null default false,
   done_date date,
-  top_date date,                           -- the day this task is one of the Top 3
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
 create index if not exists tasks_due_idx on public.tasks (due) where deleted_at is null;
-create index if not exists tasks_top_idx on public.tasks (top_date) where deleted_at is null;
 
 
--- ===========================================================
--- 2. LEADS (exist from the first reply; DMs sent live on days)
--- ===========================================================
--- Stage dates are stamped by the client the first time a stage is reached.
--- "Calls last 7 days" and "won this month" read these; the stage column is a
--- state and cannot answer when.
-create table if not exists public.leads (
-  id uuid primary key default gen_random_uuid(),
-  name text not null default '',
-  business text not null default '',
-  platform text not null default 'instagram',  -- instagram|tiktok|whatsapp|email|referral|other
-  service text not null default 'web',         -- web|seo|both|other
-  stage text not null default 'replied',       -- replied|call|proposal|won|lost
-  value numeric(12,2) not null default 0,      -- USD
-  notes text not null default '',
-  follow_up_date date,
-  replied_date date,
-  call_date date,
-  proposal_date date,
-  won_date date,
-  lost_date date,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz
-);
-create index if not exists leads_stage_idx on public.leads (stage) where deleted_at is null;
-create index if not exists leads_won_idx on public.leads (won_date) where deleted_at is null;
-create index if not exists leads_follow_idx on public.leads (follow_up_date) where deleted_at is null;
-
-
--- ===========================================================
--- 3. CONTENT
--- ===========================================================
--- posted_date is what the "videos posted today" counter reads. blog_date is
--- what "blog posts this week" reads. Neither is a counter of its own.
+-- 2. CONTENT (the scripts)
 create table if not exists public.content (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
@@ -94,31 +54,25 @@ create table if not exists public.content (
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
-create index if not exists content_stage_idx on public.content (stage) where deleted_at is null;
 create index if not exists content_posted_idx on public.content (posted_date) where deleted_at is null;
 
 
--- ===========================================================
--- 4. DAYS (one row per app day, natural key = date)
--- ===========================================================
--- The client derives the uuid from the date (stableId in js/sync.js) so both
--- devices write the same row. The unique index is the safety net.
+-- 3. DAYS (one row per app day, natural key = date, uuid from stableId)
 create table if not exists public.days (
   id uuid primary key default gen_random_uuid(),
   date date,
-  dms_sent integer not null default 0,
-  comm_minutes integer not null default 0,
   god_first boolean not null default false,
+  dms_done boolean not null default false,
+  videos_done boolean not null default false,
+  comm_done boolean not null default false,
   exercise boolean not null default false,
+  blog_done boolean not null default false,
   screen_minutes integer,
   checkin_done boolean not null default false,
   checkin_at timestamptz,
   dm_skip_reason text,                     -- notime|mood|notworth|other
   better boolean,
   journal text not null default '',
-  focus_task_id uuid,
-  focus_started_at timestamptz,
-  focus_log jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -126,13 +80,57 @@ create table if not exists public.days (
 create unique index if not exists days_date_key on public.days (date) where deleted_at is null;
 
 
--- ===========================================================
--- 5. HOLDS (purchases on a 30-day hold)
--- ===========================================================
+-- 4. GOALS
+create table if not exists public.goals (
+  id uuid primary key default gen_random_uuid(),
+  title text not null default '',
+  amount numeric(12,2) not null default 0,   -- USD, 0 when the goal is not money
+  current numeric(12,2) not null default 0,
+  deadline date,
+  done boolean not null default false,
+  sort integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+
+-- 5. EXERCISE PLAN (one row per weekday, 0 = Monday, uuid from stableId)
+create table if not exists public.exercise_plan (
+  id uuid primary key default gen_random_uuid(),
+  weekday integer not null default 0,
+  label text not null default '',          -- Upper, Legs, Cardio
+  rest boolean not null default false,
+  video_url text not null default '',
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create unique index if not exists exercise_plan_key on public.exercise_plan (weekday) where deleted_at is null;
+
+
+-- 6. CONTENT PLAN (which weekdays are content days)
+create table if not exists public.content_plan (
+  id uuid primary key default gen_random_uuid(),
+  weekday integer not null default 0,
+  do_script boolean not null default false,
+  do_film boolean not null default false,
+  do_edit boolean not null default false,
+  do_post boolean not null default false,
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create unique index if not exists content_plan_key on public.content_plan (weekday) where deleted_at is null;
+
+
+-- 7. HOLDS (purchases on a 30-day hold)
 create table if not exists public.holds (
   id uuid primary key default gen_random_uuid(),
   item text not null default '',
-  price numeric(12,2) not null default 0,  -- USD
+  price numeric(12,2) not null default 0,
   hold_until date,
   status text not null default 'holding',  -- holding|bought|dropped
   notes text not null default '',
@@ -142,37 +140,7 @@ create table if not exists public.holds (
 );
 
 
--- ===========================================================
--- 6. EXERCISES + LOGS
--- ===========================================================
--- exercise_logs has a natural key (date, exercise_id); the client derives the
--- uuid from it (exLogId in js/sync.js) so both devices write the same row.
-create table if not exists public.exercises (
-  id uuid primary key default gen_random_uuid(),
-  name text not null default '',
-  target numeric(10,2) not null default 0,
-  unit text not null default 'reps',      -- reps|min|sets|km
-  sort integer not null default 0,
-  active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz
-);
-create table if not exists public.exercise_logs (
-  id uuid primary key default gen_random_uuid(),
-  date date,
-  exercise_id uuid,
-  amount numeric(10,2) not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz
-);
-create unique index if not exists exercise_logs_key on public.exercise_logs (date, exercise_id) where deleted_at is null;
-
-
--- ===========================================================
--- 7. SETTINGS (singleton, id = stableId("settings"))
--- ===========================================================
+-- 8. SETTINGS (singleton, id = stableId("settings"))
 create table if not exists public.settings (
   id uuid primary key default gen_random_uuid(),
   target_dms integer not null default 30,
@@ -180,20 +148,14 @@ create table if not exists public.settings (
   target_comm integer not null default 75,
   screen_cap integer not null default 60,
   target_blogs integer not null default 5,
-  goal_amount numeric(12,2) not null default 5000,
-  goal_start date,
-  goal_end date,
-  weekly_mix jsonb not null default '{}'::jsonb,   -- { "teach": 6, "proof": 4, ... } per week
-  default_deal_value numeric(12,2) not null default 1500,
+  weekly_mix jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
 
 
--- ===========================================================
 -- LAST-WRITE-WINS, ENFORCED BY THE DATABASE
--- ===========================================================
 create or replace function public.reject_stale_write() returns trigger
 language plpgsql as $$
 begin
@@ -204,7 +166,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks','leads','content','days','holds','exercises','exercise_logs','settings'] loop
+  foreach t in array array['tasks','content','days','goals','exercise_plan','content_plan','holds','settings'] loop
 
     execute format('drop trigger if exists reject_stale_write on public.%I', t);
     execute format('create trigger reject_stale_write before update on public.%I
@@ -224,14 +186,3 @@ begin
 
   end loop;
 end $$;
-
-
--- ===========================================================
--- OPTIONAL HOUSEKEEPING, by hand only. Purge tombstones older than the
--- longest any device has been offline, or that device resurrects the row.
--- ===========================================================
--- delete from public.tasks    where deleted_at < now() - interval '90 days';
--- delete from public.leads    where deleted_at < now() - interval '90 days';
--- delete from public.content  where deleted_at < now() - interval '90 days';
--- delete from public.days     where deleted_at < now() - interval '90 days';
--- delete from public.holds    where deleted_at < now() - interval '90 days';

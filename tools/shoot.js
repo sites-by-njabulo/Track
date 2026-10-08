@@ -19,7 +19,7 @@ const OUT = path.join(ROOT, 'screenshots');
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 
 const args = process.argv.slice(2);
-const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'pipeline', 'content', 'review', 'settings'],
+const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'content', 'exercise', 'review', 'settings'],
               port: process.env.PORT || 4178, gate: false, focus: false, checkin: false, empty: false };
 for (let i = 0; i < args.length; i++) {
   const a = args[i], v = args[i + 1];

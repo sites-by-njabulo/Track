@@ -2,13 +2,12 @@
    5. MONEY + DATE HELPERS
    ========================================================== */
 
-// PostgREST can hand `numeric` back as a string. Coerce once, here.
 function num(v) {
   const n = typeof v === "number" ? v : parseFloat(v);
   return isFinite(n) ? n : 0;
 }
 
-// Whole dollars, sign outside the symbol ("-$500", not "$-500").
+// Whole dollars, sign outside the symbol.
 function formatUSD(v) {
   const n = Math.round(num(v));
   const sign = n < 0 ? "-" : "";
@@ -16,21 +15,14 @@ function formatUSD(v) {
   return sign + "$" + digits;
 }
 
-function formatPercent(ratio, decimals) {
-  if (ratio === null || ratio === undefined) return "none yet";
-  return (ratio * 100).toFixed(decimals || 0) + "%";
-}
-
-// Local-time date key. Never toISOString(): that is UTC, and in UTC+2 it
-// reports "yesterday" for anything before 02:00.
+// Local-time date key. Never toISOString(): that is UTC.
 function formatDateKey(d) {
   return d.getFullYear() + "-" +
          String(d.getMonth() + 1).padStart(2, "0") + "-" +
          String(d.getDate()).padStart(2, "0");
 }
 
-// The app's clock. Before DAY_START_HOUR it is still "yesterday": closing the
-// day at 00:30 writes to the day that is actually being closed.
+// The app's clock. Before DAY_START_HOUR it is still "yesterday".
 function appNow() {
   const d = new Date();
   if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
@@ -47,18 +39,15 @@ function shiftKey(key, n) {
   d.setDate(d.getDate() + n);
   return formatDateKey(d);
 }
-// n day keys ending today, oldest first.
 function windowKeys(n) {
   const out = [];
   const t = dayKey();
   for (let i = n - 1; i >= 0; i--) out.push(shiftKey(t, -i));
   return out;
 }
-// Monday to Sunday of the week containing today, shifted by whole weeks.
-function weekStart(key) {
-  const dow = (parseKey(key).getDay() + 6) % 7; // Monday = 0
-  return shiftKey(key, -dow);
-}
+// Monday = 0 ... Sunday = 6, the order the Exercise plan and Review use.
+function weekdayIndex(key) { return (parseKey(key).getDay() + 6) % 7; }
+function weekStart(key) { return shiftKey(key, -weekdayIndex(key)); }
 function weekKeys(offset) {
   const start = shiftKey(weekStart(dayKey()), 7 * (offset || 0));
   const out = [];
@@ -68,18 +57,14 @@ function weekKeys(offset) {
 function daysBetween(aKey, bKey) {
   return Math.round((parseKey(bKey) - parseKey(aKey)) / 86400000);
 }
-// Whole days from today (app day) to a "YYYY-MM-DD". Negative = past.
 function daysFromToday(dateStr) {
   if (!dateStr) return null;
   return daysBetween(dayKey(), dateStr);
 }
-function firstOfMonth(key) { return key.slice(0, 7) + "-01"; }
 function lastOfMonth(key) {
   const p = key.split("-");
   return formatDateKey(new Date(+p[0], +p[1], 0));
 }
-// Date columns are "YYYY-MM-DD" strings; ISO strings compare correctly with
-// < and >. Never new Date() them for grouping.
 function inRange(v, lo, hi) { return !!v && v >= lo && v <= hi; }
 
 function relativeDayLabel(dateStr) {
@@ -103,107 +88,35 @@ function formatLongDate(dateStr) {
 function formatWeekday(dateStr) {
   return parseKey(dateStr).toLocaleDateString("en-ZA", { weekday: "short" });
 }
-function formatTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-}
 function minutesLabel(m) {
   m = Math.round(num(m));
   if (m < 60) return m + " min";
   const h = Math.floor(m / 60), r = m % 60;
   return r ? h + "h " + r + "m" : h + "h";
 }
-function elapsedLabel(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  const mm = String(m).padStart(2, "0"), ss = String(sec).padStart(2, "0");
-  return h ? h + ":" + mm + ":" + ss : mm + ":" + ss;
-}
 function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
 
 
 /* ==========================================================
-   6. DERIVED METRICS
+   6. DERIVED
    ========================================================== */
-// Pure functions over db.*. Nothing stores its own number.
+// Pure functions over db.*. Nothing stores its own total.
 
-/* ---------- Pipeline ---------- */
+/* ---------- Daily checks ---------- */
 
-function statsRange(lo, hi) {
-  const dms = db.days.filter(function (d) { return inRange(d.date, lo, hi); })
-    .reduce(function (s, d) { return s + num(d.dms_sent); }, 0);
-  const replies = db.leads.filter(function (l) { return inRange(l.replied_date, lo, hi); }).length;
-  const calls = db.leads.filter(function (l) { return inRange(l.call_date, lo, hi); }).length;
-  const wonRows = db.leads.filter(function (l) { return l.stage === "won" && inRange(l.won_date, lo, hi); });
-  const won = wonRows.length;
-  const money = wonRows.reduce(function (s, l) { return s + num(l.value); }, 0);
-  return {
-    lo: lo, hi: hi, dms: dms, replies: replies, calls: calls, won: won, money: money,
-    replyRate: dms ? replies / dms : null,
-    dmsPerReply: replies ? Math.round(dms / replies) : null,
-    dmsPerWon: won ? Math.round(dms / won) : null
-  };
-}
-function statsFor(n) {
-  const keys = windowKeys(n);
-  return statsRange(keys[0], keys[keys.length - 1]);
-}
-
-// The sentence that answers "are DMs worth it" with numbers. Shown under the
-// DM counter all day and again inside the night check-in.
-function dmMathLine(n) {
-  const s = statsFor(n || 30);
-  const span = "Last " + n + " days: ";
-  if (!s.dms) return "No DMs logged in the last " + n + " days. The numbers start when you do.";
-  if (!s.replies) return span + plural(s.dms, "DM") + ", no replies yet. That is too few to judge from. Keep sending.";
-  if (!s.won) return span + "1 reply per " + s.dmsPerReply + " DMs, " + plural(s.calls, "call") + " booked, no client yet.";
-  return span + "1 reply per " + s.dmsPerReply + " DMs, 1 client per " + s.dmsPerWon + " DMs, " + formatUSD(s.money) + " won.";
-}
-
-function followUpsDue() {
-  const t = dayKey();
-  return db.leads
-    .filter(function (l) { return l.follow_up_date && OPEN_STAGES.indexOf(l.stage) !== -1 && l.follow_up_date <= t; })
-    .sort(function (a, b) { return a.follow_up_date < b.follow_up_date ? -1 : 1; });
-}
-
-/* ---------- Goal ---------- */
-
-function goalWindow() {
+function checksFor(key) {
+  const d = dayGet(key);
   const s = S();
-  const t = dayKey();
-  return { start: s.goal_start || firstOfMonth(t), end: s.goal_end || lastOfMonth(t), target: num(s.goal_amount) };
+  const rest = planFor(weekdayIndex(key)).rest;
+  return DAILY_CHECKS.map(function (c) {
+    // A rest day counts as exercise done without a tick.
+    const done = c.key === "exercise" && rest ? true : !!d[c.key];
+    return { key: c.key, icon: c.icon, label: c.label(s), done: done };
+  });
 }
-function goalProgress() {
-  const w = goalWindow();
-  const won = db.leads
-    .filter(function (l) { return l.stage === "won" && inRange(l.won_date, w.start, w.end); })
-    .reduce(function (s, l) { return s + num(l.value); }, 0);
-  return {
-    start: w.start, end: w.end, target: w.target, won: won,
-    remaining: Math.max(0, w.target - won),
-    ratio: w.target > 0 ? won / w.target : 0,
-    daysLeft: daysFromToday(w.end)
-  };
-}
-// Mean value of deals won in the last 90 days, else the Settings fallback.
-function avgDealValue() {
-  const keys = windowKeys(90);
-  const rows = db.leads.filter(function (l) { return l.stage === "won" && inRange(l.won_date, keys[0], keys[89]) && num(l.value) > 0; });
-  if (!rows.length) return num(S().default_deal_value) || 1500;
-  return rows.reduce(function (s, l) { return s + num(l.value); }, 0) / rows.length;
-}
-function clientsNeeded(amount) {
-  const avg = avgDealValue();
-  if (!avg) return null;
-  return Math.max(1, Math.ceil(num(amount) / avg));
-}
+function checksDone(key) { return checksFor(key).filter(function (c) { return c.done; }).length; }
 
-/* ---------- Days ---------- */
-
-// Consecutive closed days. Today not being closed yet does not break it;
-// it only ends once yesterday was missed.
+// Consecutive closed days. Today not being closed yet does not break it.
 function checkinStreak() {
   let k = dayKey();
   if (!dayGet(k).checkin_done) k = shiftKey(k, -1);
@@ -212,22 +125,7 @@ function checkinStreak() {
   return n;
 }
 
-function parksOn(key) {
-  return (dayGet(key).focus_log || []).filter(function (e) { return e.outcome === "parked"; }).length;
-}
-
-// Any day row holding a focus, not just today's: a block started at 23:50 is
-// still running at 05:10 and must not be stranded by the rollover.
-function activeFocus() {
-  const row = db.days.find(function (d) { return d.focus_task_id; });
-  if (!row) return null;
-  const task = byId("tasks", row.focus_task_id);
-  if (!task) return { row: row, task: null };
-  return { row: row, task: task };
-}
-
-// Yesterday, only if it still needs closing. Null on a first-ever open (no
-// day before today exists) so a new install is never nagged.
+// Yesterday, only if it still needs closing. Null on a first-ever open.
 function gateDayKey() {
   const today = dayKey();
   const hasPrior = db.days.some(function (d) { return d.date && d.date < today; });
@@ -237,33 +135,127 @@ function gateDayKey() {
   return y;
 }
 
+function blogsThisWeek() {
+  const w = weekKeys(0);
+  return db.days.filter(function (d) { return d.blog_done && inRange(d.date, w[0], w[6]); }).length;
+}
+
+// Why DMs were skipped, over the last n closed days.
+function skipReasonBreakdown(n) {
+  const keys = windowKeys(n);
+  const counts = {};
+  SKIP_REASONS.forEach(function (r) { counts[r.value] = 0; });
+  let closed = 0, skipped = 0;
+  keys.forEach(function (k) {
+    const d = dayGet(k);
+    if (!d.checkin_done) return;
+    closed++;
+    if (!d.dms_done) skipped++;
+    if (d.dm_skip_reason && counts[d.dm_skip_reason] !== undefined) counts[d.dm_skip_reason]++;
+  });
+  return { closed: closed, skipped: skipped, counts: counts };
+}
+
 /* ---------- Tasks ---------- */
 
-function topTasksFor(key) {
-  return db.tasks.filter(function (t) { return t.top_date === key; })
-    .sort(function (a, b) { return (a.done === b.done) ? 0 : (a.done ? 1 : -1); });
-}
 function openTasks() {
   return db.tasks.filter(function (t) { return !t.done; });
+}
+function tasksDueOn(key) {
+  return openTasks().filter(function (t) { return t.due && t.due <= key; })
+    .sort(function (a, b) { return (a.due || "") < (b.due || "") ? -1 : (a.due === b.due ? ((a.created_at || "") < (b.created_at || "") ? -1 : 1) : 1); });
+}
+
+/* ---------- Goals ---------- */
+
+function activeGoals() {
+  return db.goals.filter(function (g) { return !g.done; }).sort(function (a, b) {
+    const ad = a.deadline || "9999-99-99", bd = b.deadline || "9999-99-99";
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
+  });
+}
+// The goal the countdown on Today reads: the money goal with a deadline if
+// there is one, else the nearest deadline still open.
+function primaryGoal() {
+  const g = activeGoals();
+  return g.find(function (x) { return num(x.amount) > 0 && x.deadline; }) || g.find(function (x) { return x.deadline; }) || g[0] || null;
+}
+function goalRatio(g) {
+  return num(g.amount) > 0 ? Math.min(1, num(g.current) / num(g.amount)) : 0;
+}
+
+/* ---------- Exercise plan ---------- */
+
+function planFor(weekday) {
+  return byId("exercise_plan", planId(weekday)) || Object.assign(TABLES.exercise_plan(), { weekday: weekday });
+}
+function planToday() { return planFor(weekdayIndex(dayKey())); }
+function savePlan(weekday, fields) {
+  const row = byId("exercise_plan", planId(weekday));
+  if (row) return update("exercise_plan", row.id, fields);
+  return create("exercise_plan", Object.assign({ weekday: weekday }, fields), planId(weekday));
+}
+
+/* ---------- Content plan (which weekdays are content days) ---------- */
+
+function contentPlanFor(weekday) {
+  return byId("content_plan", contentPlanId(weekday)) || Object.assign(TABLES.content_plan(), { weekday: weekday });
+}
+function saveContentPlan(weekday, fields) {
+  const row = byId("content_plan", contentPlanId(weekday));
+  if (row) return update("content_plan", row.id, fields);
+  return create("content_plan", Object.assign({ weekday: weekday }, fields), contentPlanId(weekday));
+}
+function planActs(p) { return CONTENT_ACTS.filter(function (a) { return !!p[a.key]; }); }
+function contentPlanSet() { return db.content_plan.some(function (p) { return planActs(p).length; }); }
+// Next weekday (after today) with content work, or null.
+function nextContentDay() {
+  const today = weekdayIndex(dayKey());
+  for (let i = 1; i <= 7; i++) {
+    const w = (today + i) % 7;
+    const p = contentPlanFor(w);
+    if (planActs(p).length) return { weekday: w, plan: p, acts: planActs(p), daysAway: i };
+  }
+  return null;
+}
+// Weekdays that carry a given activity, as short names.
+function daysWith(actKey) {
+  const out = [];
+  for (let w = 0; w < 7; w++) if (contentPlanFor(w)[actKey]) out.push(WEEKDAYS[w].slice(0, 3));
+  return out;
+}
+
+// The concrete thing to do for one activity today. Formats furthest behind
+// their weekly target come first, so the gap gets filled, not the favourite.
+function actionFor(act) {
+  const mix = weekMixStatus();
+  const order = mix.slice().sort(function (a, b) { return (b.target - b.posted) - (a.target - a.posted); });
+  const formatRank = {};
+  order.forEach(function (f, i) { formatRank[f.value] = f.hit ? 100 + i : i; });
+  if (act.key === "do_script") {
+    const gap = order.find(function (f) { return !f.hit && !f.next.item; });
+    if (gap) return { verb: "Script", title: "a " + gap.label.toLowerCase() + " video", item: null, note: gap.posted + " of " + gap.target + " this week, nothing scripted" };
+    const waiting = contentInProgress().length;
+    return { verb: "Script", title: null, item: null, note: waiting ? "Nothing needs scripting. " + plural(waiting, "video") + " already scripted and waiting." : "Nothing needs scripting." };
+  }
+  const items = db.content.filter(function (c) { return c.stage === act.stage; }).sort(function (a, b) {
+    const ra = formatRank[a.format] === undefined ? 50 : formatRank[a.format];
+    const rb = formatRank[b.format] === undefined ? 50 : formatRank[b.format];
+    if (ra !== rb) return ra - rb;
+    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
+  });
+  if (!items.length) return { verb: act.verb, title: null, item: null, note: "Nothing to " + act.verb.toLowerCase() + " right now." };
+  return { verb: act.verb, title: items[0].title, item: items[0], note: items.length > 1 ? (items.length - 1) + " more after this one" : "" };
+}
+function todayContentActions() {
+  return planActs(contentPlanFor(weekdayIndex(dayKey()))).map(actionFor);
 }
 
 /* ---------- Content ---------- */
 
-function videosPostedOn(key) {
-  return db.content.filter(function (c) { return c.posted_date === key; }).length;
-}
-function countContent(field, lo, hi) {
-  return db.content.filter(function (c) { return inRange(c[field], lo, hi); }).length;
-}
-function blogsThisWeek() {
-  const w = weekKeys(0);
-  return countContent("blog_date", w[0], w[6]);
-}
 const STAGE_RANK = { edited: 0, filmed: 1, scripted: 2 };
 
-// Formats with a weekly target, from Settings. The Content page is built
-// around this list, not around a list of ideas: he has the scripts, what he
-// lacks is a clear answer to "which kind of video, and what do I do with it".
 function weeklyMix() {
   const m = S().weekly_mix || {};
   return CONTENT_FORMATS
@@ -280,7 +272,6 @@ function byStageThenAge(a, b) {
   if (r) return r;
   return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
 }
-// The furthest-along unposted video of a format, or "script one" if none.
 function formatNext(format) {
   const items = db.content.filter(function (c) { return c.format === format && c.stage !== "posted"; }).sort(byStageThenAge);
   if (items[0]) return { item: items[0], verb: NEXT_VERB[items[0].stage] || "Post", nextStage: NEXT_STAGE[items[0].stage] || "posted" };
@@ -294,18 +285,16 @@ function weekMixStatus() {
 }
 function weekTargetTotal() { return weeklyMix().reduce(function (s, f) { return s + f.target; }, 0); }
 function contentInProgress() { return db.content.filter(function (c) { return c.stage !== "posted"; }); }
-
-// The one next action for Today: the format furthest behind its weekly
-// target, and the furthest-along video in it. With no mix set, the
-// furthest-along video of any format.
+// The one concrete video to work on: the format furthest behind its weekly
+// target, its furthest-along unposted video. He has the scripts; this is the
+// answer to "which one", so the question never sends him to Instagram.
 function nextContentAction() {
   const mix = weekMixStatus();
-  if (mix.length) {
-    const behind = mix.filter(function (f) { return !f.hit; }).sort(function (a, b) {
-      return (b.target - b.posted) - (a.target - a.posted);
-    });
-    const pick = behind[0] || null;
-    if (!pick) return null;
+  const behind = mix.filter(function (f) { return !f.hit; }).sort(function (a, b) {
+    return (b.target - b.posted) - (a.target - a.posted);
+  });
+  if (behind.length) {
+    const pick = behind[0];
     return { format: pick, item: pick.next.item, verb: pick.next.verb, nextStage: pick.next.nextStage,
              title: pick.next.item ? pick.next.item.title : "a " + pick.label.toLowerCase() + " video" };
   }
@@ -313,9 +302,6 @@ function nextContentAction() {
   if (!list.length) return null;
   return { format: null, item: list[0], verb: NEXT_VERB[list[0].stage] || "Post", nextStage: NEXT_STAGE[list[0].stage] || "posted", title: list[0].title };
 }
-
-// A video whose script exists but has not become a blog post yet. Posted ones
-// first: the video is finished, the blog is the natural next move.
 function blogCandidate() {
   const list = db.content.filter(function (c) { return !c.blog_date; }).sort(function (a, b) {
     const pa = a.stage === "posted" ? 0 : 1, pb = b.stage === "posted" ? 0 : 1;
@@ -325,76 +311,22 @@ function blogCandidate() {
   return list[0] || null;
 }
 
-/* ---------- Exercise ---------- */
-
-function activeExercises() {
-  return db.exercises.filter(function (e) { return e.active; }).sort(function (a, b) {
-    if (num(a.sort) !== num(b.sort)) return num(a.sort) - num(b.sort);
-    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
-  });
-}
-function exerciseAmount(key, exerciseId) {
-  const r = byId("exercise_logs", exLogId(key, exerciseId));
-  return r ? num(r.amount) : 0;
-}
-function bumpExercise(key, exerciseId, delta) {
-  const lid = exLogId(key, exerciseId);
-  const r = byId("exercise_logs", lid);
-  const amount = Math.max(0, (r ? num(r.amount) : 0) + delta);
-  if (r) update("exercise_logs", lid, { amount: amount });
-  else create("exercise_logs", { date: key, exercise_id: exerciseId, amount: amount }, lid);
-}
-function exerciseHit(key, e) { return num(e.target) > 0 && exerciseAmount(key, e.id) >= num(e.target); }
-// null when no exercises are set up (then the plain toggle on Today applies).
-function exerciseStatus(key) {
-  const ex = activeExercises();
-  if (!ex.length) return null;
-  const done = ex.filter(function (e) { return exerciseHit(key, e); }).length;
-  return { total: ex.length, done: done, all: done === ex.length };
-}
-function exerciseDoneOn(key) {
-  const st = exerciseStatus(key);
-  return st ? st.all : !!dayGet(key).exercise;
-}
-
 /* ---------- Verse ---------- */
 
 function verseOfDay() {
   return VERSES[(appNow().getDate() - 1) % VERSES.length];
 }
 
-/* ---------- Review helpers ---------- */
+/* ---------- Review ---------- */
 
 function dayStats(key) {
   const d = dayGet(key);
   return {
     key: key,
-    dms: num(d.dms_sent),
-    replies: db.leads.filter(function (l) { return l.replied_date === key; }).length,
-    videos: videosPostedOn(key),
-    blogs: db.content.filter(function (c) { return c.blog_date === key; }).length,
-    comm: num(d.comm_minutes),
+    checks: DAILY_CHECKS.map(function (c) { return !!d[c.key]; }),
+    doneCount: checksDone(key),
     screen: d.screen_minutes,
-    parks: parksOn(key),
     closed: !!d.checkin_done,
-    god: !!d.god_first,
-    exercise: exerciseDoneOn(key)
+    better: d.better
   };
-}
-
-// How many of the last n days he logged under target, split by the reason he
-// gave. The "didn't feel like it" count sitting next to the reply rate is the
-// whole argument of the Review page.
-function skipReasonBreakdown(n) {
-  const keys = windowKeys(n);
-  const counts = {};
-  SKIP_REASONS.forEach(function (r) { counts[r.value] = 0; });
-  let closed = 0;
-  keys.forEach(function (k) {
-    const d = dayGet(k);
-    if (!d.checkin_done) return;
-    closed++;
-    if (d.dm_skip_reason && counts[d.dm_skip_reason] !== undefined) counts[d.dm_skip_reason]++;
-  });
-  return { closed: closed, counts: counts };
 }

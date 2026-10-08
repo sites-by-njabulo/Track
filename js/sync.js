@@ -10,31 +10,21 @@
 // PostgREST reject the ENTIRE batch with PGRST204 and silently break every
 // write to that table. Changed something here? Change schema.sql and re-run it.
 //
-// Stored vs derived, the rule of this app: anything he taps is stored on the
-// day row; anything that is a fact about another record is derived at render.
-// Videos posted today come from content.posted_date, blogs from
-// content.blog_date, parks from days.focus_log, Top 3 from tasks.top_date,
-// money from leads.won_date. Nothing stores its own total.
+// Anything he ticks on Today is a boolean on the day row. Weekly counts
+// (blogs, videos by format) are derived from those rows at render.
 const TABLES = {
-  tasks: () => ({
-    title: "", notes: "", due: null, area: "", done: false, done_date: null, top_date: null
-  }),
-  leads: () => ({
-    name: "", business: "", platform: "instagram", service: "web", stage: "replied",
-    value: 0, notes: "", follow_up_date: null,
-    replied_date: null, call_date: null, proposal_date: null, won_date: null, lost_date: null
-  }),
+  tasks: () => ({ title: "", notes: "", due: null, area: "", done: false, done_date: null }),
   content: () => ({
     title: "", format: "other", stage: "scripted", link: "", posted_date: null, blog_date: null, notes: ""
   }),
   days: () => ({
-    date: null, dms_sent: 0, comm_minutes: 0, god_first: false, exercise: false,
-    screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null,
-    better: null, journal: "", focus_task_id: null, focus_started_at: null, focus_log: []
+    date: null, god_first: false, dms_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
+    screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ""
   }),
+  goals: () => ({ title: "", amount: 0, current: 0, deadline: null, done: false, sort: 0 }),
+  exercise_plan: () => ({ weekday: 0, label: "", rest: false, video_url: "", notes: "" }),
+  content_plan: () => ({ weekday: 0, do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" }),
   holds: () => ({ item: "", price: 0, hold_until: null, status: "holding", notes: "" }),
-  exercises: () => ({ name: "", target: 0, unit: "reps", sort: 0, active: true }),
-  exercise_logs: () => ({ date: null, exercise_id: null, amount: 0 }),
   settings: () => Object.assign({}, SETTINGS_DEFAULTS, { weekly_mix: Object.assign({}, SETTINGS_DEFAULTS.weekly_mix) })
 };
 const TABLE_NAMES = Object.keys(TABLES);
@@ -101,7 +91,8 @@ function stableId(seed) {
          "-8" + hex.slice(17, 20) + "-" + hex.slice(20, 32);
 }
 function dayId(key) { return stableId("day:" + key); }
-function exLogId(key, exerciseId) { return stableId("ex:" + key + ":" + exerciseId); }
+function planId(weekday) { return stableId("plan:" + weekday); }
+function contentPlanId(weekday) { return stableId("cplan:" + weekday); }
 const SETTINGS_ID = stableId("settings");
 
 // Boot: localStorage first, synchronously. db[t] holds LIVE rows only.

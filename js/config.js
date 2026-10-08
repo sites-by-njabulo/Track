@@ -27,7 +27,37 @@ const DAY_START_HOUR = 5;
 // values above. Null means localStorage-only mode, which is a complete app.
 let sb = null;
 
-const CALENDAR_URL = "https://calendar.google.com/calendar/u/0/r";
+// The fixed daily checks on Today. Each is a boolean on the day row.
+const DAILY_CHECKS = [
+  { key: "god_first",   icon: "book",     label: function () { return "Time with God before the phone"; } },
+  { key: "dms_done",    icon: "message",  label: function (s) { return "Send " + s.target_dms + " cold DMs"; } },
+  { key: "videos_done", icon: "video",    label: function (s) { return "Post " + plural(s.target_videos, "video"); } },
+  { key: "comm_done",   icon: "mic",      label: function (s) { return "Communication practice, " + minutesLabel(s.target_comm); } },
+  { key: "exercise",    icon: "exercise", label: function () { return "Exercise"; } },
+  { key: "blog_done",   icon: "book",     label: function () { return "Publish a blog post"; } }
+];
+
+// What a content day can hold. Order is the order of work.
+const CONTENT_ACTS = [
+  { key: "do_script", label: "Script", verb: "Script", stage: null },
+  { key: "do_film",   label: "Film",   verb: "Film",   stage: "scripted" },
+  { key: "do_edit",   label: "Edit",   verb: "Edit",   stage: "filmed" },
+  { key: "do_post",   label: "Post",   verb: "Post",   stage: "edited" }
+];
+
+// Greetings at the top of Today, by hour of the day. One is picked per day
+// so it changes daily, not on every tap. {n} is his name.
+const GREETINGS = {
+  early:     ["Early bird today, {n}.", "Up before the sun, {n}.", "Quiet hours, {n}. Use them.", "Dawn shift, {n}.", "First one awake, {n}."],
+  morning:   ["Morning, {n}.", "Good morning, {n}.", "New day, {n}. Same job.", "Morning, {n}. Phone down, list up.", "Rise and send, {n}."],
+  afternoon: ["Afternoon, {n}.", "Halfway there, {n}.", "Still on it, {n}?", "Afternoon, {n}. What is left?", "Back at it, {n}."],
+  evening:   ["Evening, {n}.", "Home stretch, {n}.", "Evening, {n}. Close it well.", "Last light, {n}.", "Evening, {n}. Finish the list."],
+  late:      ["Working late, {n}?", "Burning the midnight oil, {n}.", "Late one, {n}.", "Night owl, {n}.", "Still here, {n}? Close the day and sleep."],
+  returns:   ["{n} returns.", "Welcome back, {n}.", "{n} is back.", "Good to see you, {n}."]
+};
+const USER_NAME = "Njabulo";
+
+const CALENDAR_URL = "https://calendar.google.com/calendar/u/2/r";
 
 // Settings row defaults. Money is USD throughout. His offers: local SEO
 // $1,000 to $1,500 a month, web design $1,000 to $3,000, so $1,500 is the
@@ -38,13 +68,9 @@ const SETTINGS_DEFAULTS = {
   target_comm: 75,
   screen_cap: 60,
   target_blogs: 5,
-  goal_amount: 5000,
-  goal_start: null,
-  goal_end: null,
   // Videos to post per week, by format. Two a day is the stated target, so
   // the default adds up to fourteen. Edited on the Settings page.
-  weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 },
-  default_deal_value: 1500
+  weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }
 };
 
 
@@ -58,34 +84,6 @@ const TASK_AREAS = [
   { value: "school",   label: "School" },
   { value: "personal", label: "Personal" }
 ];
-
-const LEAD_PLATFORMS = [
-  { value: "instagram", label: "Instagram" },
-  { value: "tiktok",    label: "TikTok" },
-  { value: "whatsapp",  label: "WhatsApp" },
-  { value: "email",     label: "Email" },
-  { value: "referral",  label: "Referral" },
-  { value: "other",     label: "Other" }
-];
-
-const LEAD_SERVICES = [
-  { value: "web",  label: "Web design" },
-  { value: "seo",  label: "Local SEO" },
-  { value: "both", label: "Web + SEO" },
-  { value: "other", label: "Other" }
-];
-
-// A lead exists from the first reply. DMs sent are a daily counter, not rows.
-const LEAD_STAGES = [
-  { value: "replied",  label: "Replied",       tone: "neutral" },
-  { value: "call",     label: "Call booked",   tone: "info" },
-  { value: "proposal", label: "Proposal sent", tone: "warn" },
-  { value: "won",      label: "Won",           tone: "good" },
-  { value: "lost",     label: "Lost",          tone: "bad" }
-];
-const OPEN_STAGES = ["replied", "call", "proposal"];
-// The date column stamped the first time a lead reaches each stage.
-const STAGE_DATE = { replied: "replied_date", call: "call_date", proposal: "proposal_date", won: "won_date", lost: "lost_date" };
 
 const CONTENT_STAGES = [
   { value: "scripted", label: "Scripted", tone: "info" },
@@ -108,13 +106,6 @@ const CONTENT_FORMATS = [
   { value: "other",     label: "Other" }
 ];
 
-const PARK_REASONS = [
-  { value: "pulled",   label: "Another task pulled me" },
-  { value: "blocked",  label: "Blocked, waiting on something" },
-  { value: "interest", label: "Lost interest" },
-  { value: "other",    label: "Other" }
-];
-
 const SKIP_REASONS = [
   { value: "notime",   label: "Ran out of time" },
   { value: "mood",     label: "Didn't feel like it" },
@@ -131,14 +122,9 @@ const HOLD_STATUSES = [
 ];
 const HOLD_DAYS = 30;
 
-const EXERCISE_UNITS = [
-  { value: "reps", label: "reps",    steps: [10, 25] },
-  { value: "min",  label: "minutes", steps: [5, 10] },
-  { value: "sets", label: "sets",    steps: [1, 2] },
-  { value: "km",   label: "km",      steps: [1, 2] }
-];
+// Monday first, matching the week everywhere else in the app.
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const TOP_LIMIT = 3;
 
 
 /* ---------- Icons ----------
