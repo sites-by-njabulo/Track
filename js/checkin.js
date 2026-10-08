@@ -77,8 +77,8 @@ function checkinHtml() {
   if (checkin.step === 2) {
     const cap = num(s.screen_cap);
     const other = dr.screen === "other" || (typeof dr.screen === "number" && SCREEN_CHIPS.indexOf(dr.screen) === -1);
-    return checkinHeader("Screen time") +
-      '<p class="ask-sub">What did the phone say today? Cap is ' + minutesLabel(cap) + ".</p>" +
+    return checkinHeader("Instagram time") +
+      '<p class="ask-sub">What does Screen Time say for Instagram today? Cap is ' + minutesLabel(cap) + ", an hour of DMs and posting plus ten.</p>" +
       '<div class="choice-grid chips-5">' + SCREEN_CHIPS.map(function (m) {
         return '<button class="choice' + (dr.screen === m ? " on" : "") + (m > cap ? " over" : "") + '" data-screen="' + m + '">' + minutesLabel(m) + "</button>";
       }).join("") +

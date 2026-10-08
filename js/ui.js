@@ -9,12 +9,14 @@ const SECTIONS = [
   { name: "tasks",    label: "Tasks",    icon: "tasks" },
   { name: "content",  label: "Content",  icon: "content" },
   { name: "exercise", label: "Exercise", icon: "exercise" },
+  { name: "communication", label: "Communication", icon: "mic" },
+  { name: "goals",    label: "Goals",    icon: "flag" },
   { name: "review",   label: "Review",   icon: "review" },
   { name: "settings", label: "Settings", icon: "settings" }
 ];
 
 // The four that earn a spot in the mobile bottom bar, plus "More".
-const MOBILE_PRIMARY = ["today", "tasks", "content", "exercise"];
+const MOBILE_PRIMARY = ["today", "tasks", "content", "goals"];
 
 let currentSectionName = "today";
 
@@ -40,6 +42,8 @@ function renderSection(name) {
     case "tasks":    renderTasks();    break;
     case "content":  renderContent();  break;
     case "exercise": renderExercise(); break;
+    case "communication": renderCommunication(); break;
+    case "goals":    renderGoals();    break;
     case "review":   renderReview();   break;
     case "settings": renderSettings(); break;
   }
@@ -59,8 +63,7 @@ function navCounts() {
   const t = dayKey();
   return {
     today: checksFor(t).length - checksDone(t) + tasksDueOn(t).length,
-    tasks: tasksDueOn(t).length,
-    content: typeof weekTargetTotal === "function" && weekTargetTotal() ? Math.max(0, weekTargetTotal() - postedThisWeek()) : 0
+    tasks: tasksDueOn(t).length
   };
 }
 
@@ -118,6 +121,45 @@ function wireNav() {
   });
   const add = document.getElementById("sidebar-add-task");
   if (add) add.addEventListener("click", function () { openTaskForm(null, { due: dayKey() }); });
+  wireSidebarResize();
+}
+
+// Drag the sidebar's right edge. Per device, so a half-width Chrome window
+// on the laptop can have a narrow sidebar without touching the phone.
+function wireSidebarResize() {
+  const handle = document.getElementById("sidebar-resize");
+  if (!handle) return;
+  let dragging = false;
+  const apply = function (w) {
+    w = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, Math.round(w)));
+    document.documentElement.style.setProperty("--sidebar-w", w + "px");
+    return w;
+  };
+  const onMove = function (e) {
+    if (!dragging) return;
+    apply(e.clientX);
+    e.preventDefault();
+  };
+  const onUp = function (e) {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove("resizing");
+    const w = apply(e.clientX);
+    try { localStorage.setItem(SIDEBAR_KEY, String(w)); } catch (err) {}
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+  handle.addEventListener("pointerdown", function (e) {
+    dragging = true;
+    document.body.classList.add("resizing");
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    e.preventDefault();
+  });
+  handle.addEventListener("dblclick", function () {
+    apply(SIDEBAR_DEFAULT);
+    try { localStorage.setItem(SIDEBAR_KEY, String(SIDEBAR_DEFAULT)); } catch (err) {}
+  });
 }
 
 

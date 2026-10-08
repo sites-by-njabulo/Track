@@ -57,20 +57,6 @@ function buildSeed(opts) {
     row({ title: 'Read 10 pages', due: null, area: 'personal', done: false }, 8)
   ];
 
-  const content = [
-    row({ title: '3 mistakes plumbers make on their website', format: 'teach', stage: 'scripted' }, 6),
-    row({ title: 'How I got my first client at 16', format: 'story', stage: 'edited' }, 4),
-    row({ title: 'Geff site before and after', format: 'proof', stage: 'filmed' }, 3),
-    row({ title: 'Why your Google Business Profile is invisible', format: 'teach', stage: 'posted', posted_date: t }, 7),
-    row({ title: 'A school day plus 30 cold DMs', format: 'dayinlife', stage: 'posted', posted_date: shift(t, -1), blog_date: shift(t, -1) }, 8),
-    row({ title: 'Reacting to a $100 website', format: 'reaction', stage: 'scripted' }, 1),
-    row({ title: 'What a $1,500 website actually includes', format: 'teach', stage: 'scripted' }, 5),
-    row({ title: 'The DM that got a reply in 4 minutes', format: 'proof', stage: 'scripted' }, 9),
-    row({ title: 'Client call: what they ask first', format: 'teach', stage: 'posted', posted_date: shift(t, -3), blog_date: shift(t, -2) }, 12),
-    row({ title: 'Local SEO in 60 seconds', format: 'teach', stage: 'posted', posted_date: shift(t, -5) }, 15),
-    row({ title: 'Reading my first cold DM out loud', format: 'story', stage: 'posted', posted_date: shift(t, -8) }, 18)
-  ];
-
   const days = [];
   const reasons = ['mood', 'notime', 'mood', 'notworth', 'other'];
   for (let i = 29; i >= 1; i--) {
@@ -80,7 +66,7 @@ function buildSeed(opts) {
     days.push(row({
       date: k, god_first: i % 4 !== 0, dms_done: dms, videos_done: i % 3 !== 0, comm_done: i % 2 === 0,
       exercise: i % 3 === 0, blog_done: i % 2 === 1,
-      screen_minutes: closed ? (i % 2 ? 55 : 85) : null,
+      screen_minutes: closed ? (i % 2 ? 60 : 90) : null,
       checkin_done: closed, checkin_at: closed ? new Date(Date.now() - i * 86400000).toISOString() : null,
       dm_skip_reason: closed && !dms ? reasons[i % reasons.length] : null,
       better: closed ? i % 3 !== 0 : null,
@@ -92,44 +78,55 @@ function buildSeed(opts) {
     screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ''
   }, 0, stableId('day:' + t)));
 
-  const goals = [
-    row({ title: '$5,000 in client work', amount: 5000, current: 1200, deadline: lastOfMonth(t), done: false, sort: 0 }, 10),
-    row({ title: 'Post every day for 30 days', amount: 0, current: 0, deadline: shift(t, 18), done: false, sort: 1 }, 12)
+  const goalMoney = row({ title: '$5,000 in client work', amount: 5000, deadline: lastOfMonth(t), done: false, sort: 0 }, 10, stableId('seed:goal1'));
+  const goalPost = row({ title: 'Post every day for 30 days', amount: 0, deadline: shift(t, 18), done: false, sort: 1 }, 12, stableId('seed:goal2'));
+  const goals = [goalMoney, goalPost];
+  const goal_entries = [
+    row({ goal_id: goalMoney.id, amount: 1200, note: 'Sipho Electrical, website deposit', date: shift(t, -12) }, 12),
+    row({ goal_id: goalMoney.id, amount: 500, note: 'Glow Beauty Bar, GBP setup', date: shift(t, -4) }, 4)
   ];
 
   const exercise_plan = [
-    { weekday: 0, label: 'Upper', rest: false, video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
-    { weekday: 1, label: 'Legs', rest: false, video_url: 'https://www.youtube.com/watch?v=vjdlqhPM9Jc', notes: '' },
-    { weekday: 2, label: '', rest: true, video_url: '', notes: '' },
-    { weekday: 3, label: 'Push', rest: false, video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
-    { weekday: 4, label: 'Pull', rest: false, video_url: '', notes: '' },
-    { weekday: 5, label: 'Cardio', rest: false, video_url: '', notes: '20 minutes, easy pace' },
-    { weekday: 6, label: '', rest: true, video_url: '', notes: '' }
-  ].map(function (p) { return row(p, 14, stableId('plan:' + p.weekday)); });
+    { weekday: 0, label: 'Upper', rest: false, link: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
+    { weekday: 1, label: 'Legs', rest: false, link: 'https://www.youtube.com/watch?v=vjdlqhPM9Jc', notes: '' },
+    { weekday: 2, label: '', rest: true, link: '', notes: '' },
+    { weekday: 3, label: 'Push', rest: false, link: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
+    { weekday: 4, label: 'Pull', rest: false, link: '', notes: '' },
+    { weekday: 5, label: 'Cardio', rest: false, link: '', notes: '20 minutes, easy pace' },
+    { weekday: 6, label: '', rest: true, link: '', notes: '' }
+  ].map(function (p) { return row(p, 14, stableId('exercise_plan:' + p.weekday)); });
+
+  const comm_plan = [
+    { weekday: 0, label: 'Speaking clearly', rest: false, link: '', notes: 'Read one page aloud, record it' },
+    { weekday: 1, label: 'Pacing', rest: false, link: '', notes: 'Slow down between points' },
+    { weekday: 2, label: 'No fillers', rest: false, link: 'https://www.youtube.com/watch?v=IODxDxX7oi4', notes: '' },
+    { weekday: 3, label: 'Eye contact', rest: false, link: '', notes: 'Hold it through the whole sentence' },
+    { weekday: 4, label: 'Storytelling', rest: false, link: '', notes: 'One story, told three times' },
+    { weekday: 5, label: 'Cold open', rest: false, link: '', notes: 'First line only, ten takes' },
+    { weekday: 6, label: '', rest: true, link: '', notes: '' }
+  ].map(function (p) { return row(p, 14, stableId('comm_plan:' + p.weekday)); });
 
   const content_plan = [
-    { weekday: 0, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: "Film 3, post 2" },
-    { weekday: 1, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: "" },
-    { weekday: 2, do_script: false, do_film: false, do_edit: false, do_post: true,  notes: "" },
-    { weekday: 3, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: "Film 3" },
-    { weekday: 4, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: "" },
-    { weekday: 5, do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" },
-    { weekday: 6, do_script: true,  do_film: false, do_edit: false, do_post: false, notes: "Script next week" }
-  ].map(function (p) { return row(p, 14, stableId('cplan:' + p.weekday)); });
+    { weekday: 0, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: 'Film 3, post 2' },
+    { weekday: 1, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: '' },
+    { weekday: 2, do_script: false, do_film: false, do_edit: false, do_post: true,  notes: '' },
+    { weekday: 3, do_script: false, do_film: true,  do_edit: false, do_post: true,  notes: 'Film 3' },
+    { weekday: 4, do_script: false, do_film: false, do_edit: true,  do_post: true,  notes: '' },
+    { weekday: 5, do_script: false, do_film: false, do_edit: false, do_post: false, notes: '' },
+    { weekday: 6, do_script: true,  do_film: false, do_edit: false, do_post: false, notes: 'Script next week' }
+  ].map(function (p) { return row(p, 14, stableId('content_plan:' + p.weekday)); });
 
   const holds = [
     row({ item: 'MacBook Air', price: 1200, hold_until: shift(t, 23), status: 'holding', notes: 'For editing. The phone edits fine.' }, 7),
     row({ item: 'Rode wireless mic', price: 180, hold_until: shift(t, -5), status: 'dropped', notes: 'The earbuds were fine on camera.' }, 35)
   ];
 
-  const settings = [row({
-    target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 60, target_blogs: 5,
-    weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }
-  }, 10, stableId('settings'))];
+  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 5 }, 10, stableId('settings'))];
 
   return {
-    track_tasks: tasks, track_content: content, track_days: days, track_goals: goals,
-    track_exercise_plan: exercise_plan, track_content_plan: content_plan, track_holds: holds, track_settings: settings
+    track_tasks: tasks, track_days: days, track_goals: goals, track_goal_entries: goal_entries,
+    track_exercise_plan: exercise_plan, track_comm_plan: comm_plan, track_content_plan: content_plan,
+    track_holds: holds, track_settings: settings
   };
 }
 

@@ -21,7 +21,6 @@ function settingsField(key, label, type, value, hint, extra) {
 function renderSettings() {
   const s = S();
   const theme = themeSetting();
-  const mix = s.weekly_mix || {};
   const configured = supabaseConfigured();
   const sync = syncLabel();
 
@@ -39,19 +38,11 @@ function renderSettings() {
         settingsField("target_dms", "Cold DMs a day", "number", s.target_dms, null, { half: true }) +
         settingsField("target_videos", "Videos posted a day", "number", s.target_videos, null, { half: true }) +
         settingsField("target_comm", "Communication practice, minutes", "number", s.target_comm, null, { half: true }) +
-        settingsField("screen_cap", "Screen time cap, minutes", "number", s.screen_cap, null, { half: true }) +
+        settingsField("screen_cap", "Instagram time cap, minutes", "number", s.screen_cap, "Instagram only, not the whole phone.", { half: true }) +
         settingsField("target_blogs", "Blog posts a week", "number", s.target_blogs, null, { half: true }) +
       "</div>" +
       '<div class="inline-actions"><button class="btn btn-primary" id="save-targets">Save targets</button></div>' +
       '<p class="panel-note">These only change the wording of the to-do list. Each item is a tick, done or not done.</p>' +
-    "</section>" +
-
-    '<section class="panel"><div class="panel-head"><h2>Weekly video mix</h2><span class="panel-meta">' + weekTargetTotal() + " a week</span></div>" +
-      '<div class="inline-fields">' + CONTENT_FORMATS.map(function (f) {
-        return settingsField("mix_" + f.value, f.label, "number", num(mix[f.value]) || 0, null, { half: true });
-      }).join("") + "</div>" +
-      '<div class="inline-actions"><button class="btn btn-primary" id="save-mix">Save mix</button></div>' +
-      '<p class="panel-note">How many of each kind to post per week. Zero hides a format. The Content page and the Today card are built from this.</p>' +
     "</section>" +
 
     '<section class="panel"><div class="panel-head"><h2>PIN</h2>' + (pinIsDefault() ? '<span class="pill tone-warn">Still 0000</span>' : "") + "</div>" +
@@ -64,14 +55,14 @@ function renderSettings() {
 
     '<section class="panel"><div class="panel-head"><h2>Sync</h2>' +
       '<span class="sync-status tone-' + sync.tone + '" data-sync-status><span class="sync-dot"></span><span>' + escapeHtml(sync.label) + "</span></span></div>" +
-      '<p class="panel-note top-note">Paste your Supabase project URL and publishable key once per device. Run supabase/schema.sql in that project first. Until then the app saves to this device only.</p>' +
+      '<p class="panel-note top-note">Set to the MyDay Supabase project. One thing to do once, on any device: open the <a href="' + SUPABASE_SQL_EDITOR + '" target="_blank" rel="noopener">SQL editor</a>, paste the whole of supabase/schema.sql, Run. Until then the sidebar will say Offline and the app saves to this device only.</p>' +
       '<div class="inline-fields">' +
-        settingsField("sb_url", "Project URL", "text", localStorage.getItem(KEYS.sbUrl) || "", null, { placeholder: "https://xxxx.supabase.co" }) +
-        settingsField("sb_key", "Publishable key", "text", localStorage.getItem(KEYS.sbKey) || "", null, { placeholder: "sb_publishable_..." }) +
+        settingsField("sb_url", "Project URL", "text", supabaseUrl(), null, { placeholder: "https://xxxx.supabase.co" }) +
+        settingsField("sb_key", "Publishable key", "text", supabaseKey(), null, { placeholder: "sb_publishable_..." }) +
       "</div>" +
       '<div class="inline-actions">' +
         '<button class="btn btn-primary" id="save-sync">' + (configured ? "Reconnect" : "Connect") + "</button>" +
-        (configured ? '<button class="btn btn-ghost" id="clear-sync">Disconnect this device</button>' : "") +
+        (configured ? '<button class="btn btn-ghost" id="clear-sync">Back to the default project</button>' : "") +
       "</div>" +
     "</section>" +
 
@@ -84,7 +75,7 @@ function renderSettings() {
       '<p class="panel-note">Import merges: a row only replaces yours if it is newer.</p>' +
     "</section>" +
 
-    '<section class="panel about"><p class="panel-note">Track. The day starts at 05:00 and ends when you close it. Built for one person, no account, no feed.</p></section>' +
+    '<section class="panel about"><p class="panel-note">Track. The day starts at 05:00 and ends when you close it. Built for one person, no account, no feed. Double-click the sidebar edge on the laptop to reset its width.</p></section>' +
     "</div>";
 
   document.getElementById("page-settings").innerHTML = html;
@@ -116,17 +107,6 @@ function wireSettings() {
       target_blogs: Math.max(0, Math.round(readSettingNumber("target_blogs")))
     });
     toast("Targets saved");
-  });
-
-  page.querySelector("#save-mix").addEventListener("click", function () {
-    const mix = {};
-    CONTENT_FORMATS.forEach(function (f) {
-      const n = Math.max(0, Math.round(readSettingNumber("mix_" + f.value)));
-      if (n) mix[f.value] = n;
-    });
-    saveSettings({ weekly_mix: mix });
-    toast("Mix saved: " + weekTargetTotal() + " videos a week");
-    renderSettings();
   });
 
   page.querySelector("#save-pin").addEventListener("click", function () {

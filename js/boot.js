@@ -110,11 +110,22 @@ async function enterApp() {
   wireConfirm();
   wireSheet();
   renderSyncStatus();
+  seedDefaultGoal();
   appReady = true;
   showSection("today");
 
   registerServiceWorker();
   armDayWatcher();
+}
+
+// The $5,000 goal exists from the first open. Once, ever: deleting it later
+// must not bring it back.
+function seedDefaultGoal() {
+  try {
+    if (localStorage.getItem("track_goal_seeded")) return;
+    if (!db.goals.length) create("goals", { title: DEFAULT_GOAL.title, amount: DEFAULT_GOAL.amount, deadline: lastOfMonth(dayKey()) });
+    localStorage.setItem("track_goal_seeded", "1");
+  } catch (e) {}
 }
 
 function registerServiceWorker() {

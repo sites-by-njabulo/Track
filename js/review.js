@@ -49,7 +49,7 @@ function renderReview() {
       "</div>" +
       '<div class="table-scroll"><table class="data-table week-table"><thead><tr><th>Day</th>' +
         DAILY_CHECKS.map(function (c) { return "<th>" + REVIEW_SHORT[c.key] + "</th>"; }).join("") +
-        '<th class="num">Screen</th><th>Closed</th></tr></thead><tbody>' +
+        '<th class="num">Instagram</th><th>Closed</th></tr></thead><tbody>' +
       stats.map(function (d) {
         const future = d.key > t;
         const today = d.key === t;
@@ -92,7 +92,7 @@ function renderReview() {
               (d.journal ? '<p class="journal-text">' + escapeHtml(d.journal) + "</p>" : "") +
               '<p class="journal-meta">' + [
                 checksDone(d.date) + " of " + DAILY_CHECKS.length + " ticked",
-                d.screen_minutes !== null && d.screen_minutes !== undefined ? minutesLabel(d.screen_minutes) + " screen" : null,
+                d.screen_minutes !== null && d.screen_minutes !== undefined ? minutesLabel(d.screen_minutes) + " on Instagram" : null,
                 d.dm_skip_reason ? lookup(SKIP_REASONS, d.dm_skip_reason).label : null
               ].filter(Boolean).map(escapeHtml).join(' <span class="dot-sep"></span> ') + "</p>" +
             "</li>";

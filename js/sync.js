@@ -14,18 +14,17 @@
 // (blogs, videos by format) are derived from those rows at render.
 const TABLES = {
   tasks: () => ({ title: "", notes: "", due: null, area: "", done: false, done_date: null }),
-  content: () => ({
-    title: "", format: "other", stage: "scripted", link: "", posted_date: null, blog_date: null, notes: ""
-  }),
   days: () => ({
     date: null, god_first: false, dms_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
     screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ""
   }),
-  goals: () => ({ title: "", amount: 0, current: 0, deadline: null, done: false, sort: 0 }),
-  exercise_plan: () => ({ weekday: 0, label: "", rest: false, video_url: "", notes: "" }),
+  goals: () => ({ title: "", amount: 0, deadline: null, done: false, sort: 0 }),
+  goal_entries: () => ({ goal_id: null, amount: 0, note: "", date: null }),
+  exercise_plan: () => ({ weekday: 0, label: "", rest: false, link: "", notes: "" }),
+  comm_plan: () => ({ weekday: 0, label: "", rest: false, link: "", notes: "" }),
   content_plan: () => ({ weekday: 0, do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" }),
   holds: () => ({ item: "", price: 0, hold_until: null, status: "holding", notes: "" }),
-  settings: () => Object.assign({}, SETTINGS_DEFAULTS, { weekly_mix: Object.assign({}, SETTINGS_DEFAULTS.weekly_mix) })
+  settings: () => Object.assign({}, SETTINGS_DEFAULTS)
 };
 const TABLE_NAMES = Object.keys(TABLES);
 
@@ -91,8 +90,9 @@ function stableId(seed) {
          "-8" + hex.slice(17, 20) + "-" + hex.slice(20, 32);
 }
 function dayId(key) { return stableId("day:" + key); }
-function planId(weekday) { return stableId("plan:" + weekday); }
-function contentPlanId(weekday) { return stableId("cplan:" + weekday); }
+// Weekly plans have one row per weekday per table; both devices mint the
+// same id for "Monday of the exercise plan".
+function weekPlanId(table, weekday) { return stableId(table + ":" + weekday); }
 const SETTINGS_ID = stableId("settings");
 
 // Boot: localStorage first, synchronously. db[t] holds LIVE rows only.
@@ -341,10 +341,10 @@ function subscribeToChanges() {
 // Lazy client. The URL and key live in localStorage (entered on the Settings
 // page), never in source, so the deployed repo holds no secrets. Re-callable:
 // Settings calls it again after saving new values.
+function supabaseUrl() { return localStorage.getItem(KEYS.sbUrl) || SUPABASE_DEFAULT_URL; }
+function supabaseKey() { return localStorage.getItem(KEYS.sbKey) || SUPABASE_DEFAULT_KEY; }
 function supabaseConfigured() {
-  const url = localStorage.getItem(KEYS.sbUrl) || "";
-  const key = localStorage.getItem(KEYS.sbKey) || "";
-  return /^https:\/\/.+/.test(url) && key.length > 20;
+  return /^https:\/\/.+/.test(supabaseUrl()) && supabaseKey().length > 20;
 }
 
 function connectSupabase() {
@@ -354,11 +354,8 @@ function connectSupabase() {
   }
   didFirstPull = false;
   if (window.supabase && supabaseConfigured()) {
-    sb = window.supabase.createClient(
-      localStorage.getItem(KEYS.sbUrl),
-      localStorage.getItem(KEYS.sbKey),
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+    sb = window.supabase.createClient(supabaseUrl(), supabaseKey(),
+      { auth: { persistSession: false, autoRefreshToken: false } });
   } else {
     sb = null;
   }

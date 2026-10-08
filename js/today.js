@@ -17,7 +17,6 @@ function renderToday() {
   const goal = primaryGoal();
   const plan = planToday();
   const cplan = contentPlanFor(weekdayIndex(t));
-  const next = nextContentAction();
   const nextDay = nextContentDay();
   const hour = new Date().getHours();
   const evening = hour >= 20 || hour < DAY_START_HOUR;
@@ -58,8 +57,8 @@ function renderToday() {
       '<div class="goal-cell"><span class="goal-num">' + daysLeft + "</span>" +
         '<span class="goal-lbl">' + (goal && goal.deadline ? "days left for " + escapeHtml(goal.title) : "days left in the month") + "</span></div>" +
       (goal && num(goal.amount) > 0
-        ? '<div class="goal-cell goal-money"><span class="goal-num">' + formatUSD(goal.current) + "</span>" +
-            '<span class="goal-lbl">of ' + formatUSD(goal.amount) + "</span>" +
+        ? '<div class="goal-cell goal-money"><span class="goal-num">' + formatUSD(goalCurrent(goal)) + "</span>" +
+            '<span class="goal-lbl">of ' + formatUSD(goal.amount) + ", " + Math.round(goalRatio(goal) * 100) + "%</span>" +
             '<span class="goal-track"><span class="goal-fill' + (goalRatio(goal) >= 1 ? " hit" : "") + '" style="width:' + Math.round(goalRatio(goal) * 100) + '%"></span></span></div>'
         : "") +
       '<div class="goal-verse"><p>' + escapeHtml(verse.text) + "</p><cite>" + escapeHtml(verse.reference) + "</cite></div>" +
@@ -78,8 +77,9 @@ function renderToday() {
     // Content
     '<section class="panel">' +
       '<div class="panel-head"><h2>Content</h2><span class="panel-meta">' +
-        (weekTargetTotal() ? postedThisWeek() + " of " + weekTargetTotal() + " posted this week" : "") + "</span></div>" +
-      contentTodayHtml(cplan, next, nextDay) +
+        CONTENT_LINKS.map(function (l) { return '<a class="doc-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + " " + ICONS.external + "</a>"; }).join(" ") +
+      "</span></div>" +
+      contentTodayHtml(cplan, nextDay) +
     "</section>" +
 
     // Goals
@@ -88,7 +88,7 @@ function renderToday() {
       (goals.length
         ? '<ul class="goal-list">' + goals.map(goalRow).join("") + "</ul>"
         : '<p class="panel-empty-text">What are you working toward, and by when? Put it here so the countdown has something to count.</p>') +
-      '<button class="add-row" id="today-add-goal">' + ICONS.plus + "<span>Add goal</span></button>" +
+      '<button class="add-row" id="today-add-goal">' + ICONS.plus + "<span>Log what came in</span></button>" +
     "</section>" +
 
     "</div>";
@@ -114,11 +114,17 @@ function checkRow(c, plan) {
   if (c.key === "exercise") {
     if (plan.rest) { label = "Rest day"; fixed = true; }
     else if (plan.label) label = "Exercise: " + plan.label;
-    if (!plan.rest && plan.video_url) {
-      extra = '<a class="doc-link" href="' + escapeHtml(plan.video_url) + '" target="_blank" rel="noopener">Guide video ' + ICONS.external + "</a>";
+    if (!plan.rest && plan.link) {
+      extra = '<a class="doc-link" href="' + escapeHtml(plan.link) + '" target="_blank" rel="noopener">Guide video ' + ICONS.external + "</a>";
     }
   }
   if (c.key === "blog_done") extra = '<span class="task-due">' + blogsThisWeek() + " of " + S().target_blogs + " this week</span>";
+  if (c.key === "comm_done") {
+    const cp = commPlanToday();
+    if (cp.rest) { label = "Communication practice: rest day"; fixed = true; }
+    else if (cp.label) label = "Communication practice: " + cp.label;
+    if (!cp.rest && cp.link) extra = '<a class="doc-link" href="' + escapeHtml(cp.link) + '" target="_blank" rel="noopener">Guide ' + ICONS.external + "</a>";
+  }
   return '<li class="task-row check-row' + (c.done ? " done" : "") + '" data-check="' + c.key + '"' + (fixed ? ' data-fixed="1"' : "") + ">" +
     '<button class="todo-check" data-toggle aria-label="' + (c.done ? "Mark as not done" : "Mark as done") + '"' + (fixed ? " disabled" : "") + ">" + (c.done ? ICONS.check : "") + "</button>" +
     '<div class="task-body"><span class="task-title">' + escapeHtml(label) + "</span>" +
@@ -126,70 +132,34 @@ function checkRow(c, plan) {
   "</li>";
 }
 
-function contentTodayHtml(cplan, next, nextDay) {
+function contentTodayHtml(cplan, nextDay) {
   const planned = contentPlanSet();
   const acts = planActs(cplan);
-  if (planned && !acts.length) {
+  if (!planned) {
+    return '<p class="content-today quiet">Set your scripting, filming, editing and posting days on the Content page and this tells you what today is for.</p>';
+  }
+  if (!acts.length) {
     return '<p class="content-today quiet">Nothing to do today.' +
       (nextDay ? " Next content day is " + WEEKDAYS[nextDay.weekday] + ": " + nextDay.acts.map(function (x) { return x.label.toLowerCase(); }).join(" and ") + "." : "") + "</p>";
   }
-  if (!planned) {
-    // No plan yet: fall back to the single furthest-behind action.
-    return (next
-      ? '<div class="next-line"><span class="next-verb">' + escapeHtml(next.verb) + '</span><span class="next-what">' + escapeHtml(next.title) + "</span>" +
-        (next.item ? '<button class="btn btn-ghost btn-sm" data-advance-today="' + next.item.id + '">Done</button>' : "") + "</div>"
-      : '<p class="content-today quiet">Nothing to do.</p>') +
-      '<p class="panel-note">Set your scripting, filming, editing and posting days on the Content page and this shows only what today is for.</p>';
-  }
   return '<p class="content-today-plan">' + acts.map(function (x) { return x.label; }).join(" and ") + " day</p>" +
-    '<ul class="act-list">' + todayContentActions().map(function (ac) {
-      return '<li class="next-line">' +
-        '<span class="next-verb">' + escapeHtml(ac.verb) + "</span>" +
-        '<span class="next-what' + (ac.title ? "" : " quiet") + '">' + escapeHtml(ac.title || ac.note) +
-          (ac.title && ac.note ? ' <span class="next-week">' + escapeHtml(ac.note) + "</span>" : "") + "</span>" +
-        (ac.item ? '<button class="btn btn-ghost btn-sm" data-advance-today="' + ac.item.id + '">Done</button>' : "") +
-      "</li>";
-    }).join("") + "</ul>";
+    (cplan.notes ? '<p class="content-today">' + escapeHtml(cplan.notes) + "</p>" : "") +
+    (nextDay ? '<p class="panel-note">Next: ' + WEEKDAYS[nextDay.weekday] + ", " + nextDay.acts.map(function (x) { return x.label.toLowerCase(); }).join(" and ") + ".</p>" : "");
 }
 
 function goalRow(g) {
   const d = g.deadline ? daysFromToday(g.deadline) : null;
   const hasAmount = num(g.amount) > 0;
+  const cur = goalCurrent(g);
   return '<li class="goal-row" data-goal="' + g.id + '" tabindex="0">' +
     '<div class="goal-row-top"><span class="goal-title">' + escapeHtml(g.title) + "</span>" +
       '<span class="goal-when' + (d !== null && d < 0 ? " cell-overdue" : "") + '">' +
         (d === null ? "" : d < 0 ? Math.abs(d) + " days past" : d === 0 ? "Today" : plural(d, "day") + " left") + "</span></div>" +
     (hasAmount
-      ? '<div class="goal-row-figs"><span>' + formatUSD(g.current) + " of " + formatUSD(g.amount) + "</span><span>" + Math.round(goalRatio(g) * 100) + "%</span></div>" +
+      ? '<div class="goal-row-figs"><span>' + formatUSD(cur) + " of " + formatUSD(g.amount) + (cur < num(g.amount) ? ", " + formatUSD(num(g.amount) - cur) + " to go" : ", reached") + "</span><span>" + Math.round(goalRatio(g) * 100) + "%</span></div>" +
         '<span class="goal-track"><span class="goal-fill' + (goalRatio(g) >= 1 ? " hit" : "") + '" style="width:' + Math.round(goalRatio(g) * 100) + '%"></span></span>'
       : "") +
   "</li>";
-}
-
-const GOAL_FIELDS = [
-  { key: "title",    label: "Goal",     type: "text", required: true, autofocus: true, placeholder: "$5,000 in client work" },
-  { key: "deadline", label: "By when",  type: "date", half: true },
-  { key: "amount",   label: "Amount, if it is money", type: "money", placeholder: "5000", half: true },
-  { key: "current",  label: "Reached so far", type: "money", placeholder: "0", half: true },
-  { key: "done",     label: "Done",     type: "checkbox", checkboxLabel: "Reached. Hide it." }
-];
-
-function openGoalForm(id) {
-  const g = id ? byId("goals", id) : null;
-  openForm({
-    title: g ? "Edit goal" : "Add goal",
-    fields: GOAL_FIELDS,
-    values: g || { deadline: lastOfMonth(dayKey()) },
-    saveLabel: g ? "Save" : "Add goal",
-    onSave: function (values) {
-      if (g) update("goals", id, values);
-      else create("goals", values);
-      renderSection(currentSectionName);
-    },
-    onDelete: g ? function () {
-      confirmDelete("this goal", function () { remove("goals", id); renderSection(currentSectionName); });
-    } : null
-  });
 }
 
 function wireToday() {
@@ -207,7 +177,10 @@ function wireToday() {
 
   page.querySelector("#today-hold").addEventListener("click", function () { openHoldForm(null); });
   page.querySelector("#today-add-task").addEventListener("click", function () { openTaskForm(null, { due: t }); });
-  page.querySelector("#today-add-goal").addEventListener("click", function () { openGoalForm(null); });
+  page.querySelector("#today-add-goal").addEventListener("click", function () {
+    const g = primaryGoal();
+    if (g) openEntryForm(g.id, function () { renderToday(); }); else showSection("goals");
+  });
 
   page.querySelectorAll(".check-row").forEach(function (li) {
     if (li.dataset.fixed) return;
@@ -220,14 +193,10 @@ function wireToday() {
 
   wireTaskRows(page, renderToday);
 
-  page.querySelectorAll("[data-advance-today]").forEach(function (b) {
-    b.addEventListener("click", function () { advanceContent(b.dataset.advanceToday); renderToday(); });
-  });
-
   page.querySelectorAll("[data-goal]").forEach(function (li) {
-    li.addEventListener("click", function () { openGoalForm(li.dataset.goal); });
+    li.addEventListener("click", function () { showSection("goals"); });
     li.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGoalForm(li.dataset.goal); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showSection("goals"); }
     });
   });
 }

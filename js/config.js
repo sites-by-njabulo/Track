@@ -23,8 +23,17 @@ const PIN_LENGTH = 4;
 // counts as closing "today".
 const DAY_START_HOUR = 5;
 
-// Created lazily by connectSupabase() in js/sync.js from the two localStorage
-// values above. Null means localStorage-only mode, which is a complete app.
+// Created lazily by connectSupabase() in js/sync.js. Null means
+// localStorage-only mode, which is a complete app.
+//
+// Defaults are MyDay's Supabase project, reused on his instruction ("I'm not
+// using MyDay any more"). The publishable key was already public in MyDay's
+// GitHub Pages source, so this is no new exposure. Settings can override
+// both per device. The tables still have to exist there: run
+// supabase/schema.sql once in that project's SQL editor.
+const SUPABASE_DEFAULT_URL = "https://cqblgvscgcrfabvuxsml.supabase.co";
+const SUPABASE_DEFAULT_KEY = "sb_publishable_lskR1oUUEEQJyf8_rivQtA_7wO8lot9";
+const SUPABASE_SQL_EDITOR = "https://supabase.com/dashboard/project/cqblgvscgcrfabvuxsml/sql/new";
 let sb = null;
 
 // The fixed daily checks on Today. Each is a boolean on the day row.
@@ -37,13 +46,27 @@ const DAILY_CHECKS = [
   { key: "blog_done",   icon: "book",     label: function () { return "Publish a blog post"; } }
 ];
 
+// Per-device sidebar width on the laptop, dragged from the handle.
+const SIDEBAR_KEY = "track_sidebar_w";
+const SIDEBAR_MIN = 180, SIDEBAR_MAX = 420, SIDEBAR_DEFAULT = 280;
+
 // What a content day can hold. Order is the order of work.
 const CONTENT_ACTS = [
-  { key: "do_script", label: "Script", verb: "Script", stage: null },
-  { key: "do_film",   label: "Film",   verb: "Film",   stage: "scripted" },
-  { key: "do_edit",   label: "Edit",   verb: "Edit",   stage: "filmed" },
-  { key: "do_post",   label: "Post",   verb: "Post",   stage: "edited" }
+  { key: "do_script", label: "Script" },
+  { key: "do_film",   label: "Film" },
+  { key: "do_edit",   label: "Edit" },
+  { key: "do_post",   label: "Post" }
 ];
+
+// Where the scripts and the content sheet actually live.
+const CONTENT_LINKS = [
+  { label: "Content sheet", url: "https://docs.google.com/spreadsheets/d/1K3hyFoq5bYq-LlL4tHGzHhz_mVpqzUWy6hBz6wiW6RI/edit?gid=0#gid=0", icon: "review" },
+  { label: "Scripts in Docs", url: "https://docs.google.com/document/u/2/", icon: "book" }
+];
+
+// The goal that is created on first open, so the countdown has something to
+// count from day one. He can edit or delete it on the Goals page.
+const DEFAULT_GOAL = { title: "$5,000 in client work", amount: 5000 };
 
 // Greetings at the top of Today, by hour of the day. One is picked per day
 // so it changes daily, not on every tap. {n} is his name.
@@ -66,11 +89,8 @@ const SETTINGS_DEFAULTS = {
   target_dms: 30,
   target_videos: 2,
   target_comm: 75,
-  screen_cap: 60,
-  target_blogs: 5,
-  // Videos to post per week, by format. Two a day is the stated target, so
-  // the default adds up to fourteen. Edited on the Settings page.
-  weekly_mix: { teach: 6, proof: 4, story: 2, dayinlife: 2 }
+  screen_cap: 70,      // Instagram only, not the whole phone: an hour of DMs and posting plus ten
+  target_blogs: 5
 };
 
 
@@ -85,27 +105,6 @@ const TASK_AREAS = [
   { value: "personal", label: "Personal" }
 ];
 
-const CONTENT_STAGES = [
-  { value: "scripted", label: "Scripted", tone: "info" },
-  { value: "filmed",   label: "Filmed",   tone: "warn" },
-  { value: "edited",   label: "Edited",   tone: "warn" },
-  { value: "posted",   label: "Posted",   tone: "good" }
-];
-// What to do next with a video, derived from its stage. Never stored.
-const NEXT_VERB  = { scripted: "Film", filmed: "Edit", edited: "Post" };
-const NEXT_STAGE = { scripted: "filmed", filmed: "edited", edited: "posted" };
-// A format with nothing in the pipeline still has a next action: script one.
-const FIRST_VERB = "Script";
-
-const CONTENT_FORMATS = [
-  { value: "story",     label: "Story" },
-  { value: "teach",     label: "Teach" },
-  { value: "proof",     label: "Proof" },
-  { value: "dayinlife", label: "Day in the life" },
-  { value: "reaction",  label: "Reaction" },
-  { value: "other",     label: "Other" }
-];
-
 const SKIP_REASONS = [
   { value: "notime",   label: "Ran out of time" },
   { value: "mood",     label: "Didn't feel like it" },
@@ -113,7 +112,7 @@ const SKIP_REASONS = [
   { value: "other",    label: "Something else" }
 ];
 
-const SCREEN_CHIPS = [30, 45, 60, 90, 120];
+const SCREEN_CHIPS = [30, 45, 60, 70, 90, 120];
 
 const HOLD_STATUSES = [
   { value: "holding", label: "On hold", tone: "info" },

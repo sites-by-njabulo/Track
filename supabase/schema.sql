@@ -1,18 +1,17 @@
 -- ===========================================================
--- Track. Supabase setup. Run this ONCE in the SQL Editor of the project you
--- paste into Settings: Dashboard -> SQL Editor -> New query -> paste -> Run.
+-- Track. Supabase setup. Run this ONCE in the SQL Editor of the project the
+-- app points at (the MyDay project by default, see SUPABASE_DEFAULT_URL in
+-- js/config.js): Dashboard -> SQL Editor -> New query -> paste -> Run.
 --
 -- Every statement is idempotent. Re-running the file is safe and is how you
--- apply changes after adding a column.
+-- apply changes after adding a column. It does not touch MyDay's own tables
+-- (myday_state, myday_notes); the two apps share the project, not the data.
 --
--- Same architecture as Agency CRM: normalized tables, soft deletes only,
--- last-write-wins enforced by a trigger on client-stamped updated_at.
--- NOTHING IS EVER HARD DELETED. `deleted_at is not null` is a tombstone.
+-- Normalized tables, soft deletes only, last-write-wins enforced by a trigger
+-- on client-stamped updated_at. NOTHING IS EVER HARD DELETED.
 --
 -- No Supabase Auth. The publishable key gets full read/write via RLS, a
--- casual deterrent behind the app's PIN. The URL and key are typed into the
--- app's Settings page and stored in that device's localStorage, never in the
--- deployed source.
+-- casual deterrent behind the app's PIN.
 --
 -- KEEP IN SYNC WITH the TABLES registry in js/sync.js. A field that exists in
 -- the registry but not here makes every write to that table fail (PGRST204).
@@ -40,24 +39,7 @@ create table if not exists public.tasks (
 create index if not exists tasks_due_idx on public.tasks (due) where deleted_at is null;
 
 
--- 2. CONTENT (the scripts)
-create table if not exists public.content (
-  id uuid primary key default gen_random_uuid(),
-  title text not null default '',
-  format text not null default 'other',    -- story|teach|proof|dayinlife|reaction|other
-  stage text not null default 'scripted',  -- scripted|filmed|edited|posted
-  link text not null default '',
-  posted_date date,
-  blog_date date,
-  notes text not null default '',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  deleted_at timestamptz
-);
-create index if not exists content_posted_idx on public.content (posted_date) where deleted_at is null;
-
-
--- 3. DAYS (one row per app day, natural key = date, uuid from stableId)
+-- 2. DAYS (one row per app day, natural key = date, uuid from stableId)
 create table if not exists public.days (
   id uuid primary key default gen_random_uuid(),
   date date,
@@ -67,7 +49,7 @@ create table if not exists public.days (
   comm_done boolean not null default false,
   exercise boolean not null default false,
   blog_done boolean not null default false,
-  screen_minutes integer,
+  screen_minutes integer,                  -- Instagram only
   checkin_done boolean not null default false,
   checkin_at timestamptz,
   dm_skip_reason text,                     -- notime|mood|notworth|other
@@ -80,12 +62,11 @@ create table if not exists public.days (
 create unique index if not exists days_date_key on public.days (date) where deleted_at is null;
 
 
--- 4. GOALS
+-- 3. GOALS + what came in against them
 create table if not exists public.goals (
   id uuid primary key default gen_random_uuid(),
   title text not null default '',
   amount numeric(12,2) not null default 0,   -- USD, 0 when the goal is not money
-  current numeric(12,2) not null default 0,
   deadline date,
   done boolean not null default false,
   sort integer not null default 0,
@@ -93,15 +74,26 @@ create table if not exists public.goals (
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+create table if not exists public.goal_entries (
+  id uuid primary key default gen_random_uuid(),
+  goal_id uuid,
+  amount numeric(12,2) not null default 0,
+  note text not null default '',
+  date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists goal_entries_goal_idx on public.goal_entries (goal_id) where deleted_at is null;
 
 
--- 5. EXERCISE PLAN (one row per weekday, 0 = Monday, uuid from stableId)
+-- 4. WEEKLY PLANS (one row per weekday, 0 = Monday, uuid from stableId)
 create table if not exists public.exercise_plan (
   id uuid primary key default gen_random_uuid(),
   weekday integer not null default 0,
   label text not null default '',          -- Upper, Legs, Cardio
   rest boolean not null default false,
-  video_url text not null default '',
+  link text not null default '',           -- the video he follows while training
   notes text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -109,8 +101,19 @@ create table if not exists public.exercise_plan (
 );
 create unique index if not exists exercise_plan_key on public.exercise_plan (weekday) where deleted_at is null;
 
+create table if not exists public.comm_plan (
+  id uuid primary key default gen_random_uuid(),
+  weekday integer not null default 0,
+  label text not null default '',          -- Speaking clearly, pacing
+  rest boolean not null default false,
+  link text not null default '',
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create unique index if not exists comm_plan_key on public.comm_plan (weekday) where deleted_at is null;
 
--- 6. CONTENT PLAN (which weekdays are content days)
 create table if not exists public.content_plan (
   id uuid primary key default gen_random_uuid(),
   weekday integer not null default 0,
@@ -126,7 +129,7 @@ create table if not exists public.content_plan (
 create unique index if not exists content_plan_key on public.content_plan (weekday) where deleted_at is null;
 
 
--- 7. HOLDS (purchases on a 30-day hold)
+-- 5. HOLDS (purchases on a 30-day hold)
 create table if not exists public.holds (
   id uuid primary key default gen_random_uuid(),
   item text not null default '',
@@ -140,15 +143,14 @@ create table if not exists public.holds (
 );
 
 
--- 8. SETTINGS (singleton, id = stableId("settings"))
+-- 6. SETTINGS (singleton, id = stableId("settings"))
 create table if not exists public.settings (
   id uuid primary key default gen_random_uuid(),
   target_dms integer not null default 30,
   target_videos integer not null default 2,
   target_comm integer not null default 75,
-  screen_cap integer not null default 60,
+  screen_cap integer not null default 70,
   target_blogs integer not null default 5,
-  weekly_mix jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -166,7 +168,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks','content','days','goals','exercise_plan','content_plan','holds','settings'] loop
+  foreach t in array array['tasks','days','goals','goal_entries','exercise_plan','comm_plan','content_plan','holds','settings'] loop
 
     execute format('drop trigger if exists reject_stale_write on public.%I', t);
     execute format('create trigger reject_stale_write before update on public.%I

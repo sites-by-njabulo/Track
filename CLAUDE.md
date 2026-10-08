@@ -1,7 +1,7 @@
 # Track
 
 Njabulo's personal daily operating system: Today, Tasks, Content, Exercise,
-Review, Settings. Built 2026-10-08, cut down the same day on his instruction:
+Communication, Goals, Review, Settings. Built 2026-10-08, cut down the same day on his instruction:
 **"I want to keep things as simple as I possibly can."** Every time a screen
 grows, re-read that line.
 
@@ -62,14 +62,16 @@ Top to bottom, and nothing else:
    (`js/config.js`), each a boolean on the day row (`god_first`, `dms_done`,
    `videos_done`, `comm_done`, `exercise`, `blog_done`), followed by the
    tasks due today or overdue, then "+ Add task". The exercise row shows the
-   day's workout from the Exercise plan and its guide video link; a rest day
-   counts as done without a tick.
-5. **Content**: what today is for. If the Content plan marks today as a
-   script/film/edit/post day, one line per activity with the concrete video
-   (`todayContentActions()`), each with a Done button that advances the
-   stage. If today is off: "Nothing to do today. Next content day is X".
-6. **Goals**: title, days left, and a progress bar when the goal is money.
-   Tap to edit. "+ Add goal".
+   day's workout from the Exercise plan with its guide video link; the
+   communication row shows the day's focus from the Communication plan. A
+   rest day on either plan counts as done without a tick.
+5. **Content**: what today is for, from the Content plan ("Film and Post
+   day", the day's note, and the next content day), plus the two links to
+   his Google Sheet and Docs (`CONTENT_LINKS`). The scripts live there, not
+   in the app.
+6. **Goals**: title, days left, "$1,700 of $5,000, $3,300 to go" and the
+   percentage with a bar. Tap goes to the Goals page. "+ Log what came in"
+   adds an entry to the primary goal.
 
 ## The behaviour rules
 
@@ -83,17 +85,26 @@ Top to bottom, and nothing else:
 - **Check-in is three steps.** The day's ticks (with a required reason if
   the DMs were not sent), screen time chips, "1% better" yes or no with an
   optional line. Under thirty seconds or it will not happen nightly.
-- **Content is formats and days, not ideas.** He has the scripts; he will not
-  be adding ideas. The Content page shows which weekdays are scripting,
-  filming, editing and posting days (`content_plan`, four booleans per
-  weekday, tap to edit) and the weekly mix (`settings.weekly_mix`, e.g. teach
-  6, proof 4, story 2, day in the life 2) with each format's posted count and
-  one next step. The scripts are a collapsed list underneath. This exists
-  because he doom-scrolls Instagram "looking for ideas" with twenty scripts
-  waiting; the page must always answer "which one, and what do I do with it".
-- **Exercise is a weekly plan**, not a tracker. `exercise_plan` has one row
-  per weekday: a workout name or rest, and the video he follows while
-  training. Ticking it off happens on Today.
+- **Content is days, not scripts.** He manages scripts in Google Sheets and
+  Docs. The Content page is only: which weekdays are scripting, filming,
+  editing and posting days (`content_plan`, four booleans and a note per
+  weekday, tap to edit) and the two links. A "This week by format" section
+  with next-step buttons was built and removed ("I don't really understand
+  it"); so was a blog "Published" button he pressed by mistake. No quick
+  action buttons on this page.
+- **Goals are entries, not a typed total.** `goals` (title, amount,
+  deadline) and `goal_entries` (goal_id, amount, note, date). Progress is
+  the sum of entries. The $5,000 goal is created once on first open
+  (`seedDefaultGoal` in `js/boot.js`, flag `track_goal_seeded`).
+- **Exercise and Communication are weekly plans**, not trackers, built from
+  one factory (`makeWeekPlanPage` in `js/weekplan.js`). One row per weekday
+  in `exercise_plan` / `comm_plan`: a label or rest, a link, notes. Ticking
+  happens on Today.
+- **Screen time means Instagram time.** Cap default 70 minutes: an hour of
+  DMs and posting plus ten. Not the whole phone (WhatsApp is client work).
+- **Sidebar is resizable** on the laptop (drag the right edge, double-click
+  to reset), stored per device in `track_sidebar_w` and applied in the head
+  script before paint, so Chrome can sit in half a screen.
 - **Holds block nothing.** They show the decision date and how far the money
   goal still is.
 
@@ -104,18 +115,24 @@ Top to bottom, and nothing else:
 | `index.html` | Shell: splash, PIN gate, sidebar, six `<section class="page">`, mobile nav, modal, sheet, confirm, toast. |
 | `styles.css` | Tokens, then everything flat. Additions are appended at the bottom in dated blocks. |
 | `js/config.js` | Keys, defaults, `DAILY_CHECKS`, `CONTENT_ACTS`, `GREETINGS`, vocab lists, `ICONS`. |
-| `js/sync.js` | `TABLES` registry (tasks, content, days, goals, exercise_plan, content_plan, holds, settings), localStorage-first db, outbox, `applyRemote`, lazy `connectSupabase()`, `dayGet`/`dayRow`/`bumpDay`, `planId`/`contentPlanId`, `S()`/`saveSettings`, export/import. |
+| `js/sync.js` | `TABLES` registry (tasks, days, goals, goal_entries, exercise_plan, comm_plan, content_plan, holds, settings), localStorage-first db, outbox, `applyRemote`, lazy `connectSupabase()`, `dayGet`/`dayRow`/`bumpDay`, `weekPlanId`, `S()`/`saveSettings`, export/import. |
 | `js/derive.js` | Dates (5AM boundary), checks, streak, gate, goals, plans, content actions. Pure functions over `db.*`. |
 | `js/ui.js` | Router, nav with counts, theme, modal, sheet, confirm, toast. |
-| `js/today.js`, `tasks.js`, `content.js`, `exercise.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module state is prefixed with the page name; one shared global scope. |
+| `js/today.js`, `tasks.js`, `content.js`, `weekplan.js` (Exercise + Communication), `goals.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module state is prefixed with the page name; one shared global scope. |
 | `js/boot.js` | PIN gate, bootstrap, service worker, 05:00 watcher, splash. |
-| `supabase/schema.sql` | Eight tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
-| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (six pages, three widths, both themes, `--gate --checkin --empty`), 49 headless assertions. |
+| `supabase/schema.sql` | Nine tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
+| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (six pages, three widths, both themes, `--gate --checkin --empty`), 50 headless assertions. |
 
-Per device (never synced): `track_theme`, `track_pin_hash`, `track_sb_url`,
-`track_sb_key`, outbox keys, `track_<table>` caches; `track_unlocked` is
-sessionStorage. The Supabase URL and key are typed into Settings, never in
-source, which is why the GitHub Pages repo can be public.
+Per device (never synced): `track_theme`, `track_sidebar_w`, `track_pin_hash`,
+`track_sb_url`, `track_sb_key`, `track_goal_seeded`, outbox keys,
+`track_<table>` caches; `track_unlocked` is sessionStorage.
+
+**Sync points at MyDay's Supabase project by default** (`SUPABASE_DEFAULT_URL`
+and `_KEY` in `js/config.js`), on his instruction: he no longer uses MyDay.
+The publishable key was already public in MyDay's Pages source. Settings can
+override per device. Until `supabase/schema.sql` has been run in that
+project the sidebar says "Offline" and everything stays local; the schema
+does not touch MyDay's own tables.
 
 ## Deploy
 
@@ -134,6 +151,6 @@ node tools/shoot.js
 
 ## Left for Njabulo
 
-- Create the Supabase project, run `supabase/schema.sql`, paste URL + key into
-  Settings on each device.
+- Run `supabase/schema.sql` once in the MyDay project's SQL editor (link on
+  the Settings page). Nothing to paste into the app.
 - Change the PIN from 0000.

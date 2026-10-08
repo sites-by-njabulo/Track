@@ -913,3 +913,33 @@ strong { font-weight: 600; }
 @media (max-width: 599px) { .topbar-title { font-size: 22px; } }
 .next-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
 .next-line .next-what { flex: 1 1 200px; min-width: 0; }
+
+
+/* ===========================================================
+   Goals page, sidebar resize handle
+   =========================================================== */
+.goal-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 12px 0 4px; }
+.goal-big .goal-num { font-size: 30px; }
+.goal-big .goal-lbl { font-size: 13px; }
+.goal-big .goal-pct { margin-left: auto; font-size: 20px; font-weight: 700; color: var(--text-2); }
+.goal-section .goal-track { margin: 6px 0 8px; height: 4px; }
+.goal-edit { cursor: pointer; }
+.goal-edit:hover { text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
+.entry-list { display: flex; flex-direction: column; margin-top: 4px; }
+.entry-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; cursor: pointer; }
+.entry-row:hover { background: var(--surface-2); }
+.entry-row strong { font-weight: 600; }
+.goal-row.settled { opacity: .55; }
+.panel-meta .doc-link { margin-left: 10px; }
+
+.sidebar { position: relative; }
+.sidebar-resize { display: none; }
+@media (min-width: 769px) {
+  .sidebar-resize { display: block; position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 5; }
+  .sidebar-resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px; background: transparent; transition: background .15s var(--ease); }
+  .sidebar-resize:hover::after, body.resizing .sidebar-resize::after { background: var(--border-2); }
+  body.resizing { cursor: col-resize; user-select: none; }
+  body.resizing * { cursor: col-resize !important; }
+}
+
+a.btn { text-decoration: none; }

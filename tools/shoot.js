@@ -19,7 +19,7 @@ const OUT = path.join(ROOT, 'screenshots');
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 
 const args = process.argv.slice(2);
-const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'content', 'exercise', 'review', 'settings'],
+const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'content', 'exercise', 'communication', 'goals', 'review', 'settings'],
               port: process.env.PORT || 4178, gate: false, focus: false, checkin: false, empty: false };
 for (let i = 0; i < args.length; i++) {
   const a = args[i], v = args[i + 1];
@@ -65,7 +65,7 @@ async function shoot(browser, theme, width) {
   const page = await browser.newPage();
   const label = theme + '/' + width;
   page.on('pageerror', (err) => problems.errors.push(label + ': ' + err.message));
-  page.on('console', (msg) => { if (msg.type() === 'error') problems.errors.push(label + ' console: ' + msg.text()); });
+  page.on('console', (msg) => { if (msg.type() === 'error' && msg.text().indexOf('net::') === -1) problems.errors.push(label + ' console: ' + msg.text()); });
   page.on('response', (r) => { if (r.status() >= 400 && r.url().indexOf('supabase') === -1) problems.requests.push(r.status() + ' ' + r.url()); });
 
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);

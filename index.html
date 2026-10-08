@@ -24,6 +24,8 @@
     var t = localStorage.getItem("track_theme");
     var dark = t === "dark" || (t !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     if (dark) document.documentElement.setAttribute("data-theme", "dark");
+    var w = parseInt(localStorage.getItem("track_sidebar_w"), 10);
+    if (w >= 180 && w <= 420) document.documentElement.style.setProperty("--sidebar-w", w + "px");
   } catch (e) {}
 })();
 </script>
@@ -96,6 +98,7 @@
     <div class="sidebar-foot">
       <div class="sync-status tone-muted" data-sync-status><span class="sync-dot"></span><span>Starting</span></div>
     </div>
+    <div class="sidebar-resize" id="sidebar-resize" title="Drag to resize"></div>
   </aside>
 
   <main id="main-content">
@@ -103,6 +106,8 @@
     <section class="page" data-page="tasks"    id="page-tasks"></section>
     <section class="page" data-page="content"  id="page-content"></section>
     <section class="page" data-page="exercise" id="page-exercise"></section>
+    <section class="page" data-page="communication" id="page-communication"></section>
+    <section class="page" data-page="goals"    id="page-goals"></section>
     <section class="page" data-page="review"   id="page-review"></section>
     <section class="page" data-page="settings" id="page-settings"></section>
   </main>
@@ -165,7 +170,8 @@
 <script src="js/ui.js"></script>
 <script src="js/tasks.js"></script>
 <script src="js/content.js"></script>
-<script src="js/exercise.js"></script>
+<script src="js/weekplan.js"></script>
+<script src="js/goals.js"></script>
 <script src="js/today.js"></script>
 <script src="js/checkin.js"></script>
 <script src="js/review.js"></script>

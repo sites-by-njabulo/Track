@@ -107,10 +107,12 @@ function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one +
 function checksFor(key) {
   const d = dayGet(key);
   const s = S();
-  const rest = planFor(weekdayIndex(key)).rest;
+  const w = weekdayIndex(key);
+  const exRest = weekPlanFor("exercise_plan", w).rest;
+  const commRest = weekPlanFor("comm_plan", w).rest;
   return DAILY_CHECKS.map(function (c) {
-    // A rest day counts as exercise done without a tick.
-    const done = c.key === "exercise" && rest ? true : !!d[c.key];
+    // A rest day counts as done without a tick.
+    const done = (c.key === "exercise" && exRest) || (c.key === "comm_done" && commRest) ? true : !!d[c.key];
     return { key: c.key, icon: c.icon, label: c.label(s), done: done };
   });
 }
@@ -170,43 +172,48 @@ function tasksDueOn(key) {
 
 function activeGoals() {
   return db.goals.filter(function (g) { return !g.done; }).sort(function (a, b) {
+    if (num(a.sort) !== num(b.sort)) return num(a.sort) - num(b.sort);
     const ad = a.deadline || "9999-99-99", bd = b.deadline || "9999-99-99";
     if (ad !== bd) return ad < bd ? -1 : 1;
     return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
   });
 }
+function goalEntries(goalId) {
+  return db.goal_entries.filter(function (e) { return e.goal_id === goalId; })
+    .sort(function (a, b) { return (a.date || "") < (b.date || "") ? 1 : (a.date === b.date ? ((a.created_at || "") < (b.created_at || "") ? 1 : -1) : -1); });
+}
+// What has come in toward a goal: the sum of its entries. Never stored.
+function goalCurrent(g) {
+  return goalEntries(g.id).reduce(function (s, e) { return s + num(e.amount); }, 0);
+}
+function goalRatio(g) {
+  return num(g.amount) > 0 ? Math.min(1, goalCurrent(g) / num(g.amount)) : 0;
+}
 // The goal the countdown on Today reads: the money goal with a deadline if
-// there is one, else the nearest deadline still open.
+// there is one, else the nearest deadline, else the first.
 function primaryGoal() {
   const g = activeGoals();
   return g.find(function (x) { return num(x.amount) > 0 && x.deadline; }) || g.find(function (x) { return x.deadline; }) || g[0] || null;
 }
-function goalRatio(g) {
-  return num(g.amount) > 0 ? Math.min(1, num(g.current) / num(g.amount)) : 0;
-}
 
-/* ---------- Exercise plan ---------- */
+/* ---------- Weekly plans (exercise, communication) ---------- */
 
-function planFor(weekday) {
-  return byId("exercise_plan", planId(weekday)) || Object.assign(TABLES.exercise_plan(), { weekday: weekday });
+function weekPlanFor(table, weekday) {
+  return byId(table, weekPlanId(table, weekday)) || Object.assign(TABLES[table](), { weekday: weekday });
 }
+function saveWeekPlan(table, weekday, fields) {
+  const row = byId(table, weekPlanId(table, weekday));
+  if (row) return update(table, row.id, fields);
+  return create(table, Object.assign({ weekday: weekday }, fields), weekPlanId(table, weekday));
+}
+function planFor(weekday) { return weekPlanFor("exercise_plan", weekday); }
 function planToday() { return planFor(weekdayIndex(dayKey())); }
-function savePlan(weekday, fields) {
-  const row = byId("exercise_plan", planId(weekday));
-  if (row) return update("exercise_plan", row.id, fields);
-  return create("exercise_plan", Object.assign({ weekday: weekday }, fields), planId(weekday));
-}
+function commPlanToday() { return weekPlanFor("comm_plan", weekdayIndex(dayKey())); }
 
-/* ---------- Content plan (which weekdays are content days) ---------- */
+/* ---------- Content days ---------- */
 
-function contentPlanFor(weekday) {
-  return byId("content_plan", contentPlanId(weekday)) || Object.assign(TABLES.content_plan(), { weekday: weekday });
-}
-function saveContentPlan(weekday, fields) {
-  const row = byId("content_plan", contentPlanId(weekday));
-  if (row) return update("content_plan", row.id, fields);
-  return create("content_plan", Object.assign({ weekday: weekday }, fields), contentPlanId(weekday));
-}
+function contentPlanFor(weekday) { return weekPlanFor("content_plan", weekday); }
+function saveContentPlan(weekday, fields) { return saveWeekPlan("content_plan", weekday, fields); }
 function planActs(p) { return CONTENT_ACTS.filter(function (a) { return !!p[a.key]; }); }
 function contentPlanSet() { return db.content_plan.some(function (p) { return planActs(p).length; }); }
 // Next weekday (after today) with content work, or null.
@@ -224,91 +231,6 @@ function daysWith(actKey) {
   const out = [];
   for (let w = 0; w < 7; w++) if (contentPlanFor(w)[actKey]) out.push(WEEKDAYS[w].slice(0, 3));
   return out;
-}
-
-// The concrete thing to do for one activity today. Formats furthest behind
-// their weekly target come first, so the gap gets filled, not the favourite.
-function actionFor(act) {
-  const mix = weekMixStatus();
-  const order = mix.slice().sort(function (a, b) { return (b.target - b.posted) - (a.target - a.posted); });
-  const formatRank = {};
-  order.forEach(function (f, i) { formatRank[f.value] = f.hit ? 100 + i : i; });
-  if (act.key === "do_script") {
-    const gap = order.find(function (f) { return !f.hit && !f.next.item; });
-    if (gap) return { verb: "Script", title: "a " + gap.label.toLowerCase() + " video", item: null, note: gap.posted + " of " + gap.target + " this week, nothing scripted" };
-    const waiting = contentInProgress().length;
-    return { verb: "Script", title: null, item: null, note: waiting ? "Nothing needs scripting. " + plural(waiting, "video") + " already scripted and waiting." : "Nothing needs scripting." };
-  }
-  const items = db.content.filter(function (c) { return c.stage === act.stage; }).sort(function (a, b) {
-    const ra = formatRank[a.format] === undefined ? 50 : formatRank[a.format];
-    const rb = formatRank[b.format] === undefined ? 50 : formatRank[b.format];
-    if (ra !== rb) return ra - rb;
-    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
-  });
-  if (!items.length) return { verb: act.verb, title: null, item: null, note: "Nothing to " + act.verb.toLowerCase() + " right now." };
-  return { verb: act.verb, title: items[0].title, item: items[0], note: items.length > 1 ? (items.length - 1) + " more after this one" : "" };
-}
-function todayContentActions() {
-  return planActs(contentPlanFor(weekdayIndex(dayKey()))).map(actionFor);
-}
-
-/* ---------- Content ---------- */
-
-const STAGE_RANK = { edited: 0, filmed: 1, scripted: 2 };
-
-function weeklyMix() {
-  const m = S().weekly_mix || {};
-  return CONTENT_FORMATS
-    .filter(function (f) { return num(m[f.value]) > 0; })
-    .map(function (f) { return { value: f.value, label: f.label, target: Math.round(num(m[f.value])) }; });
-}
-function postedThisWeek(format) {
-  const w = weekKeys(0);
-  return db.content.filter(function (c) { return (!format || c.format === format) && inRange(c.posted_date, w[0], w[6]); }).length;
-}
-function rankStage(c) { return STAGE_RANK[c.stage] === undefined ? 9 : STAGE_RANK[c.stage]; }
-function byStageThenAge(a, b) {
-  const r = rankStage(a) - rankStage(b);
-  if (r) return r;
-  return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
-}
-function formatNext(format) {
-  const items = db.content.filter(function (c) { return c.format === format && c.stage !== "posted"; }).sort(byStageThenAge);
-  if (items[0]) return { item: items[0], verb: NEXT_VERB[items[0].stage] || "Post", nextStage: NEXT_STAGE[items[0].stage] || "posted" };
-  return { item: null, verb: FIRST_VERB, nextStage: "scripted" };
-}
-function weekMixStatus() {
-  return weeklyMix().map(function (f) {
-    const posted = postedThisWeek(f.value);
-    return { value: f.value, label: f.label, target: f.target, posted: posted, hit: posted >= f.target, next: formatNext(f.value) };
-  });
-}
-function weekTargetTotal() { return weeklyMix().reduce(function (s, f) { return s + f.target; }, 0); }
-function contentInProgress() { return db.content.filter(function (c) { return c.stage !== "posted"; }); }
-// The one concrete video to work on: the format furthest behind its weekly
-// target, its furthest-along unposted video. He has the scripts; this is the
-// answer to "which one", so the question never sends him to Instagram.
-function nextContentAction() {
-  const mix = weekMixStatus();
-  const behind = mix.filter(function (f) { return !f.hit; }).sort(function (a, b) {
-    return (b.target - b.posted) - (a.target - a.posted);
-  });
-  if (behind.length) {
-    const pick = behind[0];
-    return { format: pick, item: pick.next.item, verb: pick.next.verb, nextStage: pick.next.nextStage,
-             title: pick.next.item ? pick.next.item.title : "a " + pick.label.toLowerCase() + " video" };
-  }
-  const list = contentInProgress().sort(byStageThenAge);
-  if (!list.length) return null;
-  return { format: null, item: list[0], verb: NEXT_VERB[list[0].stage] || "Post", nextStage: NEXT_STAGE[list[0].stage] || "posted", title: list[0].title };
-}
-function blogCandidate() {
-  const list = db.content.filter(function (c) { return !c.blog_date; }).sort(function (a, b) {
-    const pa = a.stage === "posted" ? 0 : 1, pb = b.stage === "posted" ? 0 : 1;
-    if (pa !== pb) return pa - pb;
-    return (a.created_at || "") < (b.created_at || "") ? -1 : 1;
-  });
-  return list[0] || null;
 }
 
 /* ---------- Verse ---------- */
