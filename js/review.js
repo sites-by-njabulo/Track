@@ -101,6 +101,12 @@ function renderReview() {
     "</section>" +
     "</div>" +
 
+    (db.stands.length
+      ? '<section class="panel"><div class="panel-head"><h2>Stand, last 30 days</h2><span class="panel-meta">' +
+          standCount(standsIn(30), "stood") + " stood" + (standCount(standsIn(30), "slipped") ? ", " + standCount(standsIn(30), "slipped") + " got back up" : "") +
+        "</span></div></section>"
+      : "") +
+
     '<section class="panel">' +
       '<div class="panel-head"><h2>On hold</h2><button class="btn btn-ghost btn-sm" id="add-hold">' + ICONS.plus + "<span>Add</span></button></div>" +
       (holds.length

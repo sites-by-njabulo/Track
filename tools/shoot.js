@@ -19,8 +19,8 @@ const OUT = path.join(ROOT, 'screenshots');
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 
 const args = process.argv.slice(2);
-const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'content', 'exercise', 'communication', 'goals', 'review', 'settings'],
-              port: process.env.PORT || 4178, gate: false, focus: false, checkin: false, empty: false };
+const opt = { widths: [390, 768, 1280], themes: ['light', 'dark'], pages: ['today', 'tasks', 'content', 'exercise', 'communication', 'goals', 'stand', 'review', 'settings'],
+              port: process.env.PORT || 4178, gate: false, focus: false, checkin: false, stand: false, empty: false };
 for (let i = 0; i < args.length; i++) {
   const a = args[i], v = args[i + 1];
   if (a === '--widths') { opt.widths = v.split(',').map(Number).filter(Boolean); i++; }
@@ -30,6 +30,7 @@ for (let i = 0; i < args.length; i++) {
   else if (a === '--gate') opt.gate = true;
   else if (a === '--focus') opt.focus = true;
   else if (a === '--checkin') opt.checkin = true;
+  else if (a === '--stand') opt.stand = true;
   else if (a === '--empty') opt.empty = true;
 }
 
@@ -91,6 +92,21 @@ async function shoot(browser, theme, width) {
     await new Promise((r) => setTimeout(r, 350));
     await checkOverflow(page, label + ' ' + name);
     await page.screenshot({ path: path.join(dir, name + '.png'), fullPage: true });
+  }
+
+  if (opt.stand) {
+    await page.evaluate(() => showSection('stand'));
+    await page.evaluate(() => openStand());
+    for (let step = 0; step < 8; step++) {
+      await new Promise((r) => setTimeout(r, step === 7 ? 3200 : 900));
+      await page.screenshot({ path: path.join(dir, 'stand-' + step + '.png') });
+      await page.evaluate(() => {
+        const f = document.querySelector('[data-feeling="habit"]'); if (f) f.click();
+        const a = document.querySelector('[data-action="pushups"]'); if (a) a.click();
+        const n = document.querySelector('[data-next]'); if (n) n.click();
+      });
+    }
+    await page.evaluate(() => closeStand());
   }
 
   if (opt.checkin) {

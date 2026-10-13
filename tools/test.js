@@ -119,6 +119,22 @@ async function openApp(browser, seed, url) {
       saveWeekPlan('comm_plan', weekdayIndex(t), { rest: true });
       out.restCountsDone = checksFor(t).find((c) => c.key === 'comm_done').done === true;
       saveWeekPlan('comm_plan', weekdayIndex(t), { rest: false });
+      // Stand flow end to end
+      openStand();
+      out.standOpens = document.getElementById('stand').classList.contains('open') && !!document.querySelector('.breath');
+      const standsBefore = db.stands.length;
+      for (let i = 0; i < 7; i++) {
+        const fb = document.querySelector('[data-feeling="tired"]'); if (fb) fb.click();
+        const ab = document.querySelector('[data-action="phone"]'); if (ab) ab.click();
+        const nb = document.querySelector('[data-next]'); if (nb) nb.click();
+      }
+      out.standDone = !!document.querySelector('.stand-done') && db.stands.length === standsBefore + 1 && db.stands[db.stands.length - 1].outcome === 'stood';
+      closeStand();
+      out.standClosed = !document.getElementById('stand').classList.contains('open');
+      out.stakesDefault = standStakes().length === STAND_DEFAULT_STAKES.length;
+      saveSettings({ stand_list: 'A\nB' });
+      out.stakesCustom = standStakes().length === 2;
+      saveSettings({ stand_list: '' });
       const snap = exportAll();
       out.importNothingNewer = importAll(JSON.parse(JSON.stringify(snap))) === 0;
       return out;
@@ -171,13 +187,13 @@ async function openApp(browser, seed, url) {
     ({ page, errors } = await openApp(browser, {}));
     const r5 = await page.evaluate(() => {
       const out = { gate: gateDayKey(), streak: checkinStreak(), checks: checksFor(dayKey()).length, goal: primaryGoal(), pin: pinIsDefault() };
-      out.pages = ['today', 'tasks', 'content', 'exercise', 'communication', 'goals', 'review', 'settings'].map((p) => { showSection(p); return document.getElementById('page-' + p).innerHTML.length > 100; });
+      out.pages = ['today', 'tasks', 'content', 'exercise', 'communication', 'goals', 'stand', 'review', 'settings'].map((p) => { showSection(p); return document.getElementById('page-' + p).innerHTML.length > 100; });
       return out;
     });
     check('fresh install has no gate', r5.gate === null);
     check('fresh install defaults', r5.streak === 0 && r5.checks === 6 && r5.pin === true, r5);
     check('fresh install seeds the $5,000 goal once', r5.goal && r5.goal.amount === 5000 && /5,000/.test(r5.goal.title), r5.goal);
-    check('all eight pages render empty', r5.pages.every(Boolean), r5.pages);
+    check('all nine pages render empty', r5.pages.every(Boolean), r5.pages);
     check('no page errors on fresh install', errors.length === 0, errors);
     await page.close();
 

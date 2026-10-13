@@ -11,12 +11,15 @@ const SECTIONS = [
   { name: "exercise", label: "Exercise", icon: "exercise" },
   { name: "communication", label: "Communication", icon: "mic" },
   { name: "goals",    label: "Goals",    icon: "flag" },
+  { name: "stand",    label: "Stand",    icon: "shield" },
   { name: "review",   label: "Review",   icon: "review" },
   { name: "settings", label: "Settings", icon: "settings" }
 ];
 
 // The four that earn a spot in the mobile bottom bar, plus "More".
-const MOBILE_PRIMARY = ["today", "tasks", "content", "goals"];
+// Stand is in the bottom bar on purpose: the urge comes at night, on the
+// phone, and it has to be one tap away.
+const MOBILE_PRIMARY = ["today", "tasks", "content", "stand"];
 
 let currentSectionName = "today";
 
@@ -44,6 +47,7 @@ function renderSection(name) {
     case "exercise": renderExercise(); break;
     case "communication": renderCommunication(); break;
     case "goals":    renderGoals();    break;
+    case "stand":    renderStand();    break;
     case "review":   renderReview();   break;
     case "settings": renderSettings(); break;
   }
@@ -404,6 +408,7 @@ function wireModal() {
     if (e.key !== "Escape") return;
     if (document.getElementById("confirm").classList.contains("open")) { closeConfirm(); return; }
     if (document.getElementById("modal").classList.contains("open")) { closeForm(); return; }
+    if (document.getElementById("stand").classList.contains("open")) { closeStand(); return; }
     closeMoreSheet();
     closeSheet();
   });

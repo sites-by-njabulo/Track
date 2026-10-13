@@ -90,7 +90,8 @@ const SETTINGS_DEFAULTS = {
   target_videos: 2,
   target_comm: 75,
   screen_cap: 70,      // Instagram only, not the whole phone: an hour of DMs and posting plus ten
-  target_blogs: 4
+  target_blogs: 4,
+  stand_list: ""        // what is on the line, one per line; empty = the defaults in js/stand.js
 };
 
 
@@ -178,6 +179,7 @@ const ICONS = {
   cloud:    svg('<path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A7 7 0 0 0 4.3 12.3 3.5 3.5 0 0 0 6 19h11.5Z"/>'),
   inbox:    svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-7A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1Z"/>'),
   zap:      svg('<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>'),
+  shield:   svg('<path d="M12 2.5 4.5 5.5v6c0 5 3.2 8.6 7.5 10 4.3-1.4 7.5-5 7.5-10v-6L12 2.5Z"/><path d="m9 12 2 2 4-4"/>'),
   chevronDown: svg('<path d="m6 9 6 6 6-6"/>', 2),
   search:   svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')
 };

@@ -45,6 +45,12 @@ function renderSettings() {
       '<p class="panel-note">These only change the wording of the to-do list. Each item is a tick, done or not done.</p>' +
     "</section>" +
 
+    '<section class="panel"><div class="panel-head"><h2>Stand: what is on the line</h2></div>' +
+      '<div class="field"><label for="s_stand_list">One per line. Leave empty to use the built-in list.</label>' +
+        '<textarea id="s_stand_list" rows="6" placeholder="' + escapeHtml(STAND_DEFAULT_STAKES.join("\n")) + '">' + escapeHtml(s.stand_list || "") + "</textarea></div>" +
+      '<div class="inline-actions"><button class="btn btn-primary" id="save-stand">Save list</button></div>' +
+    "</section>" +
+
     '<section class="panel"><div class="panel-head"><h2>PIN</h2>' + (pinIsDefault() ? '<span class="pill tone-warn">Still 0000</span>' : "") + "</div>" +
       '<div class="inline-fields">' +
         settingsField("pin_old", "Current PIN", "password", "", null, { half: true }) +
@@ -107,6 +113,11 @@ function wireSettings() {
       target_blogs: Math.max(0, Math.round(readSettingNumber("target_blogs")))
     });
     toast("Targets saved");
+  });
+
+  page.querySelector("#save-stand").addEventListener("click", function () {
+    saveSettings({ stand_list: (document.getElementById("s_stand_list").value || "").trim() });
+    toast("Saved");
   });
 
   page.querySelector("#save-pin").addEventListener("click", function () {

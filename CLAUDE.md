@@ -1,7 +1,7 @@
 # Track
 
 Njabulo's personal daily operating system: Today, Tasks, Content, Exercise,
-Communication, Goals, Review, Settings. Built 2026-10-08, cut down the same day on his instruction:
+Communication, Goals, Stand, Review, Settings. Built 2026-10-08, cut down the same day on his instruction:
 **"I want to keep things as simple as I possibly can."** Every time a screen
 grows, re-read that line.
 
@@ -102,6 +102,24 @@ Top to bottom, and nothing else:
   happens on Today.
 - **Screen time means Instagram time.** Cap default 70 minutes: an hour of
   DMs and posting plus ten. Not the whole phone (WhatsApp is client work).
+- **Stand is the page for the urge.** He asked for it himself (2026-10-13):
+  he struggles with lust and pornography, is a committed Christian, and the
+  trigger comes at night. `js/stand.js` is a full-screen, always-dark flow,
+  one thing per screen: ten-second breathing ring, name the feeling (each
+  feeling has a one-line truth), a verse (fourteen on purity and temptation,
+  rotating), what is on the line (`settings.stand_list`, one per line, with
+  built-in defaults: future wife, kids, the $5,000, the people he is meant to
+  help, peace with God), three hard lines in the Goggins/Tate cadence he
+  asked for (written in the file, never real quotes, never misogyny, always
+  compatible with the faith framing), one concrete action (phone out of the
+  room, 30 push-ups, cold water, 60 seconds of prayer with a timer), a short
+  prayer, then the finish: an SVG ring draws itself, "You stood.", the count
+  this month, James 1:12. Every completion is a `stands` row (outcome
+  "stood"). "I already gave in" is a separate short path (1 John 1:9,
+  Proverbs 24:16, say it to God, get up) logged as "slipped", so a slip never
+  becomes a spiral. Stand sits in the phone's bottom bar on purpose: one tap
+  at night. Tone rule: hard and direct, never shaming. God is developing him,
+  not punishing him. Do not add tracking beyond the count.
 - **Sidebar is resizable** on the laptop (drag the right edge, double-click
   to reset), stored per device in `track_sidebar_w` and applied in the head
   script before paint, so Chrome can sit in half a screen.
@@ -118,10 +136,10 @@ Top to bottom, and nothing else:
 | `js/sync.js` | `TABLES` registry (tasks, days, goals, goal_entries, exercise_plan, comm_plan, content_plan, holds, settings), localStorage-first db, outbox, `applyRemote`, lazy `connectSupabase()`, `dayGet`/`dayRow`/`bumpDay`, `weekPlanId`, `S()`/`saveSettings`, export/import. |
 | `js/derive.js` | Dates (5AM boundary), checks, streak, gate, goals, plans, content actions. Pure functions over `db.*`. |
 | `js/ui.js` | Router, nav with counts, theme, modal, sheet, confirm, toast. |
-| `js/today.js`, `tasks.js`, `content.js`, `weekplan.js` (Exercise + Communication), `goals.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module state is prefixed with the page name; one shared global scope. |
+| `js/today.js`, `tasks.js`, `content.js`, `weekplan.js` (Exercise + Communication), `goals.js`, `stand.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module state is prefixed with the page name; one shared global scope. |
 | `js/boot.js` | PIN gate, bootstrap, service worker, 05:00 watcher, splash. |
-| `supabase/schema.sql` | Nine tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
-| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (six pages, three widths, both themes, `--gate --checkin --empty`), 50 headless assertions. |
+| `supabase/schema.sql` | Ten tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
+| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (nine pages, three widths, both themes, `--gate --checkin --stand --empty`), 55 headless assertions. |
 
 Per device (never synced): `track_theme`, `track_sidebar_w`, `track_pin_hash`,
 `track_sb_url`, `track_sb_key`, `track_goal_seeded`, outbox keys,

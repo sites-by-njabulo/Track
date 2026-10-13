@@ -24,6 +24,7 @@ const TABLES = {
   comm_plan: () => ({ weekday: 0, label: "", rest: false, link: "", notes: "" }),
   content_plan: () => ({ weekday: 0, do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" }),
   holds: () => ({ item: "", price: 0, hold_until: null, status: "holding", notes: "" }),
+  stands: () => ({ date: null, at: null, feeling: null, action: null, outcome: "stood" }),
   settings: () => Object.assign({}, SETTINGS_DEFAULTS)
 };
 const TABLE_NAMES = Object.keys(TABLES);

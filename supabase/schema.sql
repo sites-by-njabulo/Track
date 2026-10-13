@@ -143,6 +143,21 @@ create table if not exists public.holds (
 );
 
 
+-- 5b. STANDS (every time the Stand flow was completed, or a slip logged)
+create table if not exists public.stands (
+  id uuid primary key default gen_random_uuid(),
+  date date,
+  at timestamptz,
+  feeling text,                            -- bored|lonely|stressed|tired|habit|other
+  action text,                             -- phone|pushups|water|pray
+  outcome text not null default 'stood',   -- stood|slipped
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+create index if not exists stands_date_idx on public.stands (date) where deleted_at is null;
+
+
 -- 6. SETTINGS (singleton, id = stableId("settings"))
 create table if not exists public.settings (
   id uuid primary key default gen_random_uuid(),
@@ -151,10 +166,15 @@ create table if not exists public.settings (
   target_comm integer not null default 75,
   screen_cap integer not null default 70,
   target_blogs integer not null default 4,
+  stand_list text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
 );
+
+
+-- Columns added after the first run. Safe to re-run.
+alter table public.settings add column if not exists stand_list text not null default '';
 
 
 -- LAST-WRITE-WINS, ENFORCED BY THE DATABASE
@@ -168,7 +188,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tasks','days','goals','goal_entries','exercise_plan','comm_plan','content_plan','holds','settings'] loop
+  foreach t in array array['tasks','days','goals','goal_entries','exercise_plan','comm_plan','content_plan','holds','stands','settings'] loop
 
     execute format('drop trigger if exists reject_stale_write on public.%I', t);
     execute format('create trigger reject_stale_write before update on public.%I

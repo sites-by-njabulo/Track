@@ -121,12 +121,18 @@ function buildSeed(opts) {
     row({ item: 'Rode wireless mic', price: 180, hold_until: shift(t, -5), status: 'dropped', notes: 'The earbuds were fine on camera.' }, 35)
   ];
 
-  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4 }, 10, stableId('settings'))];
+  const stands = [
+    row({ date: shift(t, -2), at: new Date(Date.now() - 2 * 86400000).toISOString(), feeling: "habit", action: "phone", outcome: "stood" }, 2),
+    row({ date: shift(t, -5), at: new Date(Date.now() - 5 * 86400000).toISOString(), feeling: "lonely", action: "pray", outcome: "stood" }, 5),
+    row({ date: shift(t, -9), at: new Date(Date.now() - 9 * 86400000).toISOString(), feeling: null, action: null, outcome: "slipped" }, 9)
+  ];
+
+  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4, stand_list: '' }, 10, stableId('settings'))];
 
   return {
     track_tasks: tasks, track_days: days, track_goals: goals, track_goal_entries: goal_entries,
     track_exercise_plan: exercise_plan, track_comm_plan: comm_plan, track_content_plan: content_plan,
-    track_holds: holds, track_settings: settings
+    track_holds: holds, track_stands: stands, track_settings: settings
   };
 }
 
