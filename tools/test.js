@@ -123,11 +123,15 @@ async function openApp(browser, seed, url) {
       openStand();
       out.standOpens = document.getElementById('stand').classList.contains('open') && !!document.querySelector('.breath');
       const standsBefore = db.stands.length;
-      for (let i = 0; i < 7; i++) {
+      let sawAlly = false, sawPlan = false;
+      for (let i = 0; i < 8; i++) {
         const fb = document.querySelector('[data-feeling="tired"]'); if (fb) fb.click();
+        if (document.querySelector('[data-action="ally"]')) sawAlly = true;
+        if (document.querySelector('.stand-choice-plan')) sawPlan = true;
         const ab = document.querySelector('[data-action="phone"]'); if (ab) ab.click();
         const nb = document.querySelector('[data-next]'); if (nb) nb.click();
       }
+      out.standAllyAndPlanOffered = sawAlly && sawPlan;
       out.standDone = !!document.querySelector('.stand-done') && db.stands.length === standsBefore + 1 && db.stands[db.stands.length - 1].outcome === 'stood';
       closeStand();
       out.standClosed = !document.getElementById('stand').classList.contains('open');
@@ -135,6 +139,13 @@ async function openApp(browser, seed, url) {
       saveSettings({ stand_list: 'A\nB' });
       out.stakesCustom = standStakes().length === 2;
       saveSettings({ stand_list: '' });
+      // slip path logs with the feeling and reframes
+      openSlip();
+      out.slipOpens = /not disqualified/i.test(document.getElementById('stand').textContent);
+      document.querySelector('[data-feeling="lonely"]').click();
+      document.querySelector('[data-confessed]').click();
+      out.slipLogged = db.stands[db.stands.length - 1].outcome === 'slipped' && db.stands[db.stands.length - 1].feeling === 'lonely';
+      out.allyUrl = standAllyUrl().indexOf('https://wa.me/27821234567?text=') === 0;
       const snap = exportAll();
       out.importNothingNewer = importAll(JSON.parse(JSON.stringify(snap))) === 0;
       return out;

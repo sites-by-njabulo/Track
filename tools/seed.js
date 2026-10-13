@@ -127,7 +127,7 @@ function buildSeed(opts) {
     row({ date: shift(t, -9), at: new Date(Date.now() - 9 * 86400000).toISOString(), feeling: null, action: null, outcome: "slipped" }, 9)
   ];
 
-  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4, stand_list: '' }, 10, stableId('settings'))];
+  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4, stand_list: '', stand_plan: '', stand_ally: '27821234567', stand_ally_name: 'Sipho' }, 10, stableId('settings'))];
 
   return {
     track_tasks: tasks, track_days: days, track_goals: goals, track_goal_entries: goal_entries,

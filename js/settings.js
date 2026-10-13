@@ -45,10 +45,18 @@ function renderSettings() {
       '<p class="panel-note">These only change the wording of the to-do list. Each item is a tick, done or not done.</p>' +
     "</section>" +
 
-    '<section class="panel"><div class="panel-head"><h2>Stand: what is on the line</h2></div>' +
-      '<div class="field"><label for="s_stand_list">One per line. Leave empty to use the built-in list.</label>' +
-        '<textarea id="s_stand_list" rows="6" placeholder="' + escapeHtml(STAND_DEFAULT_STAKES.join("\n")) + '">' + escapeHtml(s.stand_list || "") + "</textarea></div>" +
-      '<div class="inline-actions"><button class="btn btn-primary" id="save-stand">Save list</button></div>' +
+    '<section class="panel"><div class="panel-head"><h2>Stand</h2></div>' +
+      '<div class="inline-fields">' +
+        '<div class="field"><label for="s_stand_plan">Your if-then plan for the urge</label>' +
+          '<textarea id="s_stand_plan" rows="2" placeholder="' + escapeHtml(STAND_DEFAULT_PLAN) + '">' + escapeHtml(s.stand_plan || "") + "</textarea>" +
+          '<span class="field-hint">Decided now, in daylight, so there is nothing to decide at night. Shown as the first option inside the flow.</span></div>' +
+        settingsField("stand_ally_name", "Ally's name", "text", s.stand_ally_name || "", null, { half: true, placeholder: "Who you can message" }) +
+        settingsField("stand_ally", "Ally's WhatsApp number", "text", s.stand_ally || "", "Digits only, with country code, like 27821234567. Leave empty for no ally.", { half: true, placeholder: "27821234567" }) +
+        '<div class="field"><label for="s_stand_list">What is on the line, one per line</label>' +
+          '<textarea id="s_stand_list" rows="6" placeholder="' + escapeHtml(STAND_DEFAULT_STAKES.join("\n")) + '">' + escapeHtml(s.stand_list || "") + "</textarea>" +
+          '<span class="field-hint">Leave empty to use the built-in list.</span></div>' +
+      "</div>" +
+      '<div class="inline-actions"><button class="btn btn-primary" id="save-stand">Save</button></div>' +
     "</section>" +
 
     '<section class="panel"><div class="panel-head"><h2>PIN</h2>' + (pinIsDefault() ? '<span class="pill tone-warn">Still 0000</span>' : "") + "</div>" +
@@ -116,8 +124,14 @@ function wireSettings() {
   });
 
   page.querySelector("#save-stand").addEventListener("click", function () {
-    saveSettings({ stand_list: (document.getElementById("s_stand_list").value || "").trim() });
+    saveSettings({
+      stand_list: (document.getElementById("s_stand_list").value || "").trim(),
+      stand_plan: (document.getElementById("s_stand_plan").value || "").trim(),
+      stand_ally: readSettingText("stand_ally").replace(/[^\d]/g, ""),
+      stand_ally_name: readSettingText("stand_ally_name")
+    });
     toast("Saved");
+    renderSettings();
   });
 
   page.querySelector("#save-pin").addEventListener("click", function () {

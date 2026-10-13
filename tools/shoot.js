@@ -97,12 +97,12 @@ async function shoot(browser, theme, width) {
   if (opt.stand) {
     await page.evaluate(() => showSection('stand'));
     await page.evaluate(() => openStand());
-    for (let step = 0; step < 8; step++) {
-      await new Promise((r) => setTimeout(r, step === 7 ? 3200 : 900));
+    for (let step = 0; step < 9; step++) {
+      await new Promise((r) => setTimeout(r, step === 8 ? 3400 : 900));
       await page.screenshot({ path: path.join(dir, 'stand-' + step + '.png') });
       await page.evaluate(() => {
         const f = document.querySelector('[data-feeling="habit"]'); if (f) f.click();
-        const a = document.querySelector('[data-action="pushups"]'); if (a) a.click();
+        const a = document.querySelector('[data-action="wave"]'); if (a) a.click();
         const n = document.querySelector('[data-next]'); if (n) n.click();
       });
     }

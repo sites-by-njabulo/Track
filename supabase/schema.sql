@@ -167,6 +167,9 @@ create table if not exists public.settings (
   screen_cap integer not null default 70,
   target_blogs integer not null default 4,
   stand_list text not null default '',
+  stand_plan text not null default '',
+  stand_ally text not null default '',
+  stand_ally_name text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz
@@ -175,6 +178,9 @@ create table if not exists public.settings (
 
 -- Columns added after the first run. Safe to re-run.
 alter table public.settings add column if not exists stand_list text not null default '';
+alter table public.settings add column if not exists stand_plan text not null default '';
+alter table public.settings add column if not exists stand_ally text not null default '';
+alter table public.settings add column if not exists stand_ally_name text not null default '';
 
 
 -- LAST-WRITE-WINS, ENFORCED BY THE DATABASE

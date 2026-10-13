@@ -105,19 +105,27 @@ Top to bottom, and nothing else:
 - **Stand is the page for the urge.** He asked for it himself (2026-10-13):
   he struggles with lust and pornography, is a committed Christian, and the
   trigger comes at night. `js/stand.js` is a full-screen, always-dark flow,
-  one thing per screen: ten-second breathing ring, name the feeling (each
-  feeling has a one-line truth), a verse (fourteen on purity and temptation,
-  rotating), what is on the line (`settings.stand_list`, one per line, with
-  built-in defaults: future wife, kids, the $5,000, the people he is meant to
-  help, peace with God), three hard lines in the Goggins/Tate cadence he
-  asked for (written in the file, never real quotes, never misogyny, always
-  compatible with the faith framing), one concrete action (phone out of the
-  room, 30 push-ups, cold water, 60 seconds of prayer with a timer), a short
-  prayer, then the finish: an SVG ring draws itself, "You stood.", the count
-  this month, James 1:12. Every completion is a `stands` row (outcome
-  "stood"). "I already gave in" is a separate short path (1 John 1:9,
-  Proverbs 24:16, say it to God, get up) logged as "slipped", so a slip never
-  becomes a spiral. Stand sits in the phone's bottom bar on purpose: one tap
+  one thing per screen, rebuilt 2026-10-14 on what holds up in the research
+  and in the apps made for this (Fortify, Urge, NoFap.io, QUITTR): three
+  physiological sighs (24s), name the feeling (HALT plus bored, stressed,
+  "just this hour"; each has a one-line truth), a verse (fourteen, rotating),
+  what is on the line (`settings.stand_list`, defaults in the file; the
+  "tomorrow's 30 DMs" line was removed on his request because it read as
+  more work, replaced by "waking up tomorrow and feeling good about
+  yesterday"), three hard lines in the Goggins/Tate cadence he asked for
+  (written in the file, never real quotes, never misogyny, always compatible
+  with the faith framing), an optional camera step ("Look yourself in the
+  eye", front camera, stream stopped on leave), one action with his if-then
+  plan first (`settings.stand_plan`, implementation intentions), a
+  three-minute "ride it out" wave timer that narrates rise, peak and fall, or
+  a one-tap WhatsApp message to an ally (`settings.stand_ally`, digits with
+  country code, `stand_ally_name`), a short prayer, then the finish: an SVG
+  ring draws itself, "You stood.", the count this month, James 1:12, and
+  "phone out of the bedroom". Every completion is a `stands` row (outcome
+  "stood"). "I already gave in" is a separate short path built against the
+  abstinence violation effect: one lapse is one event, 1 John 1:9, Proverbs
+  24:16, one optional "what was going on before" tap, say it to God, get up.
+  Logged as "slipped", shown as "Got back up", never as a streak reset. Stand sits in the phone's bottom bar on purpose: one tap
   at night. Tone rule: hard and direct, never shaming. God is developing him,
   not punishing him. Do not add tracking beyond the count.
 - **Sidebar is resizable** on the laptop (drag the right edge, double-click
@@ -139,7 +147,7 @@ Top to bottom, and nothing else:
 | `js/today.js`, `tasks.js`, `content.js`, `weekplan.js` (Exercise + Communication), `goals.js`, `stand.js`, `checkin.js`, `review.js`, `settings.js` | One file per page. Module state is prefixed with the page name; one shared global scope. |
 | `js/boot.js` | PIN gate, bootstrap, service worker, 05:00 watcher, splash. |
 | `supabase/schema.sql` | Ten tables. Pair of `TABLES`; change both or writes fail with PGRST204. |
-| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (nine pages, three widths, both themes, `--gate --checkin --stand --empty`), 55 headless assertions. |
+| `tools/serve.js`, `seed.js`, `shoot.js`, `test.js` | Local server on 4178, seed relative to today, screenshots (nine pages, three widths, both themes, `--gate --checkin --stand --empty`), 59 headless assertions. |
 
 Per device (never synced): `track_theme`, `track_sidebar_w`, `track_pin_hash`,
 `track_sb_url`, `track_sb_key`, `track_goal_seeded`, outbox keys,

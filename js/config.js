@@ -91,7 +91,10 @@ const SETTINGS_DEFAULTS = {
   target_comm: 75,
   screen_cap: 70,      // Instagram only, not the whole phone: an hour of DMs and posting plus ten
   target_blogs: 4,
-  stand_list: ""        // what is on the line, one per line; empty = the defaults in js/stand.js
+  stand_list: "",       // what is on the line, one per line; empty = the defaults in js/stand.js
+  stand_plan: "",       // the if-then plan for the urge; empty = the default in js/stand.js
+  stand_ally: "",       // WhatsApp number of the person he can message in one tap, digits only
+  stand_ally_name: ""
 };
 
 
