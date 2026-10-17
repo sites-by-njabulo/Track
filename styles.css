@@ -1058,3 +1058,6 @@ body.stand-open { overflow: hidden; }
 .wave-count { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .stand-ally-link { align-self: flex-start; text-decoration: none; }
 .stand-verse.small p { font-size: 18px; }
+
+.stand-entry { cursor: pointer; }
+.stand-entry:hover { background: var(--surface-2); }

@@ -52,15 +52,15 @@ const STAND_LINES = [
   "Nobody is coming to pull the phone out of your hand. Good. This win is yours alone, and so is the loss.",
   "Discipline is picking what you want most over what you want now. You told God what you want most. Act like it.",
   "A man who cannot say no to a screen will not be trusted with a family, a business, or a calling. Earn the trust tonight.",
-  "You are not tired. You are tempted. Those feel the same at 11pm and they are not the same.",
+  "You are not tired. You are tempted. Those feel the same and they are not the same.",
   "Weak men negotiate with the urge. Strong men do not pick up the call.",
   "Ten minutes of nothing, then days of shame. That is the trade on the table. Only a fool takes it twice.",
   "The version of you that gets the clients, the wife, the respect, is on the other side of this exact moment. Won repeatedly. Starting now.",
   "You have already proven you can lose to this. Boring. Prove something new.",
-  "Hard now, proud tomorrow. Easy now, ashamed tomorrow. You already know which one you will feel at 6am.",
+  "Hard now, proud later. Easy now, ashamed in an hour. You already know which one you will feel.",
   "God is developing you, not punishing you. Development is just repetitions of this moment, won.",
-  "Men talk about discipline in the daytime. Discipline is decided in the dark, alone, with nobody watching except God.",
-  "Put the phone down like a man who has somewhere to be in the morning. Because you do.",
+  "Men talk about discipline in public. Discipline is decided alone, with nobody watching except God.",
+  "Put the phone down and leave the room like a man who has somewhere to be. Because you do.",
   "This feeling has a shelf life of about fifteen minutes. The regret does not. Outlast the fifteen.",
   "You are not fighting the urge. You are letting it pass through a room it does not own."
 ];
@@ -73,7 +73,7 @@ const STAND_FEELINGS = [
   { value: "bored",    label: "Bored",          truth: "Boredom is a signal to build something, not to consume something." },
   { value: "angry",    label: "Angry",          truth: "Anger wants to punish someone. This punishes you. Walk it off instead." },
   { value: "hungry",   label: "Hungry",         truth: "Low fuel, low judgment. Eat something real and the urge shrinks with it." },
-  { value: "habit",    label: "It is just this hour", truth: "Then the fix is the hour. Phone out of the room at ten, every night." },
+  { value: "habit",    label: "It is just this hour", truth: "Then the fix is the hour. Notice when it comes, and be somewhere else, with people, at that hour." },
   { value: "other",    label: "Something else", truth: "Whatever it is, it is real, and it deserves better than this." }
 ];
 
@@ -87,23 +87,22 @@ const STAND_DEFAULT_STAKES = [
   "Your self-respect, which you cannot buy back in the morning."
 ];
 
-const STAND_DEFAULT_PLAN = "If the urge comes after ten at night, then the phone goes in another room and I go to sleep.";
+const STAND_DEFAULT_PLAN = "If the urge comes, then I leave the room immediately, phone left behind, and I walk until it passes.";
 
+// Flee, do not fight. Every option gets him out of the room. (2 Timothy 2:22)
 const STAND_ACTIONS = [
-  { value: "plan",    label: "Do your plan" },
-  { value: "wave",    label: "Ride it out, three minutes" },
-  { value: "phone",   label: "Phone in another room, then bed" },
-  { value: "pushups", label: "30 push-ups, right now" },
-  { value: "water",   label: "Cold water on the face, a glass to drink" },
-  { value: "pray",    label: "Pray for 60 seconds, out loud" },
-  { value: "ally",    label: "Message your ally" }
+  { value: "plan",  label: "Do your plan" },
+  { value: "walk",  label: "Leave the room. Walk for three minutes." },
+  { value: "water", label: "Cold water on the face, then out of the room" },
+  { value: "pray",  label: "Pray for 60 seconds, out loud, somewhere else" },
+  { value: "ally",  label: "Message your ally" }
 ];
 
 const STAND_PRAYER = "Father, I feel this pull and I am bringing it to You instead of hiding it. You see me and You are not disgusted. Keep my eyes. Keep my heart. Make me the man You can trust with more. I choose You tonight. Amen.";
-const STAND_ALLY_MESSAGE = "Hey, having a hard moment tonight. Can you pray for me and check on me tomorrow?";
+const STAND_ALLY_MESSAGE = "Hey, having a hard moment right now. Can you pray for me and check on me later?";
 
 const STAND_STEPS = ["breathe", "name", "verse", "stakes", "talk", "mirror", "act", "pray", "done"];
-const BREATH_SECONDS = 24;   // three physiological sighs of eight seconds
+const BREATH_SECONDS = 24;   // three physiological sighs of eight seconds, not skippable
 const WAVE_SECONDS = 180;
 
 let stand = null;          // { step, feeling, action, verse, lines, timer, stream }
@@ -150,7 +149,7 @@ function renderStand() {
     pageHeader("Stand", stood ? '<span class="sub-check">' + ICONS.check + "</span>" + plural(stood, "time") + " stood this month" : "Stand firm in the faith. 1 Corinthians 16:13") +
     '<div class="col">' +
       '<section class="stand-hero">' +
-        '<p class="stand-hero-text">When the urge hits, open this. Do not think, do not argue with it, just press the button and follow the screens. About four minutes. The urge itself only lasts a few more than that if you do not feed it.</p>' +
+        '<p class="stand-hero-text">When the urge hits, open this. Do not think, do not argue with it, just press the button and follow the screens. About four minutes, any time of day. The urge itself only lasts a few more than that if you do not feed it.</p>' +
         '<button class="btn btn-primary stand-go" id="stand-go">' + ICONS.shield + "<span>I feel the urge</span></button>" +
         '<button class="link-btn stand-slip-link" id="stand-slip">I already gave in</button>' +
       "</section>" +
@@ -162,10 +161,11 @@ function renderStand() {
       (recent.length
         ? '<section class="panel"><div class="panel-head"><h2>This month</h2><span class="panel-meta">' + stood + " stood" + (slipped ? ", " + slipped + " got back up" : "") + "</span></div>" +
             '<ul class="mini-list">' + recent.map(function (s) {
-              return "<li><span>" + escapeHtml(formatWeekday(s.date) + " " + formatShortDate(s.date)) + (s.at ? ", " + escapeHtml(formatTime(s.at)) : "") +
+              return '<li class="stand-entry" data-entry="' + s.id + '" tabindex="0" title="Tap to remove"><span>' + escapeHtml(formatWeekday(s.date) + " " + formatShortDate(s.date)) + (s.at ? ", " + escapeHtml(formatTime(s.at)) : "") +
                 (s.feeling ? '<span class="cell-sub">' + escapeHtml(lookup(STAND_FEELINGS, s.feeling).label) + "</span>" : "") + "</span>" +
                 (s.outcome === "stood" ? '<span class="pill tone-good">Stood</span>' : '<span class="pill tone-muted">Got back up</span>') + "</li>";
-            }).join("") + "</ul></section>"
+            }).join("") + "</ul>" +
+            '<p class="panel-note">Tap an entry to remove it, if it was logged by mistake.</p></section>'
         : "") +
     "</div>";
 
@@ -174,6 +174,16 @@ function renderStand() {
   document.getElementById("stand-slip").addEventListener("click", function () { openSlip(); });
   document.querySelectorAll("#page-stand [data-goto]").forEach(function (b) {
     b.addEventListener("click", function () { showSection(b.dataset.goto); });
+  });
+  document.querySelectorAll("#page-stand [data-entry]").forEach(function (li) {
+    const del = function () {
+      confirmDialog("Remove this entry? Only do this if it was logged by mistake.", "Remove", function () {
+        remove("stands", li.dataset.entry);
+        renderStand();
+      }, true);
+    };
+    li.addEventListener("click", del);
+    li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); del(); } });
   });
 }
 
@@ -237,7 +247,7 @@ function standStepHtml() {
       '<p class="stand-sub">In through the nose, a second small sip in, then a long breath out through the mouth. The fastest known way to bring the body down.</p>' +
       '<div class="breath"><div class="breath-ring"></div><span class="breath-label" id="breath-label">Breathe in</span></div>' +
       '<p class="stand-sub" id="breath-count">' + BREATH_SECONDS + "</p>" +
-      '<div class="stand-foot"><button class="btn btn-ghost stand-skip" data-next>I am still here</button></div>' +
+      '<div class="stand-foot" id="breath-foot"></div>' +
     "</div>";
   }
 
@@ -312,8 +322,8 @@ function standStepHtml() {
       (stand.action === "pray"
         ? '<div class="breath small"><div class="breath-ring slow"></div><span class="breath-label" id="pray-count">60</span></div>'
         : "") +
-      (stand.action === "wave"
-        ? '<div class="wave-box"><p class="stand-sub" id="wave-text">It is rising. That is what it does. Do nothing.</p>' +
+      (stand.action === "walk"
+        ? '<div class="wave-box"><p class="stand-sub" id="wave-text">Get up and go. It is rising. That is what it does. Keep walking.</p>' +
             '<div class="wave"><div class="wave-fill" id="wave-fill"></div></div>' +
             '<p class="stand-sub wave-count" id="wave-count">3:00</p></div>'
         : "") +
@@ -340,8 +350,8 @@ function standStepHtml() {
     '<p class="stand-sub stand-late" style="animation-delay:1.5s">God is not done with you. He is building the man He can trust with more.</p>' +
     '<p class="stand-count stand-late" style="animation-delay:1.9s">' + plural(stood, "time") + " this month.</p>" +
     '<blockquote class="stand-verse stand-late" style="animation-delay:2.3s"><p>' + escapeHtml(STAND_FINAL_VERSE.text) + "</p><cite>" + escapeHtml(STAND_FINAL_VERSE.reference) + "</cite></blockquote>" +
-    '<p class="stand-sub stand-late" style="animation-delay:2.7s">Last step tonight: phone out of the bedroom. The urge comes back when the phone does.</p>' +
-    '<div class="stand-foot stand-late" style="animation-delay:3s"><button class="btn btn-primary" data-close>Go to sleep</button></div>' +
+    '<p class="stand-sub stand-late" style="animation-delay:2.7s">Last step: stay out of that room for a while. The urge lives where it found you.</p>' +
+    '<div class="stand-foot stand-late" style="animation-delay:3s"><button class="btn btn-primary" data-close>Back to the day</button></div>' +
   "</div>";
 }
 
@@ -392,9 +402,12 @@ function wireStandStep() {
       if (label) label.textContent = phase(BREATH_SECONDS - left);
       if (left <= 0) {
         clearInterval(stand.timer); stand.timer = null;
-        const btn = root.querySelector("[data-next]");
-        if (btn) { btn.classList.remove("btn-ghost", "stand-skip"); btn.classList.add("btn-primary"); }
         if (label) label.textContent = "Good.";
+        const foot = root.querySelector("#breath-foot");
+        if (foot) {
+          foot.innerHTML = '<button class="btn btn-primary stand-late" data-next>Next</button>';
+          foot.querySelector("[data-next]").addEventListener("click", function () { stand.step++; renderStandStep(); });
+        }
       }
     }, 1000);
   }
@@ -423,7 +436,7 @@ function wireStandStep() {
     }, 1000);
   }
 
-  if (name === "act" && stand.action === "wave") {
+  if (name === "act" && stand.action === "walk") {
     // The wave rises for the first third, holds, then falls. The text says
     // what is happening so he can watch it instead of obeying it.
     let left = WAVE_SECONDS;
@@ -436,13 +449,13 @@ function wireStandStep() {
       const h = x < 0.35 ? 20 + (x / 0.35) * 70 : x < 0.5 ? 90 : 90 - ((x - 0.5) / 0.5) * 80;
       if (fill) fill.style.height = Math.round(h) + "%";
       if (count) count.textContent = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
-      if (text) text.textContent = x < 0.35 ? "It is rising. That is what it does. Do nothing." : x < 0.5 ? "This is the peak. It feels like it will last. It will not." : x < 0.85 ? "It is passing. You did not feed it, so it is leaving." : "Almost gone. You outlasted it.";
+      if (text) text.textContent = x < 0.35 ? "Keep walking. It is rising. That is what it does." : x < 0.5 ? "This is the peak. It feels like it will last. It will not." : x < 0.85 ? "It is passing. You did not feed it, so it is leaving." : "Almost gone. You outlasted it. Stay out of that room a while.";
     };
     paint();
     stand.timer = setInterval(function () {
       left--;
       paint();
-      if (left <= 0) { clearInterval(stand.timer); stand.timer = null; if (text) text.textContent = "Gone. That is the whole trick."; }
+      if (left <= 0) { clearInterval(stand.timer); stand.timer = null; if (text) text.textContent = "Gone. That is the whole trick. Do not go back in yet."; }
     }, 1000);
   }
 }
@@ -479,7 +492,7 @@ function renderSlip() {
       '<div class="stand-choices stand-late" style="animation-delay:1.5s">' + STAND_FEELINGS.map(function (x) {
         return '<button class="stand-choice' + (slip.feeling === x.value ? " on" : "") + '" data-feeling="' + x.value + '">' + escapeHtml(x.label) + "</button>";
       }).join("") + "</div>" +
-      '<p class="stand-sub stand-late" style="animation-delay:1.7s">Say it to God plainly, right now. Then water, phone in another room, bed. Tomorrow\'s ticks are still yours, and so is the man you are becoming.</p>' +
+      '<p class="stand-sub stand-late" style="animation-delay:1.7s">Say it to God plainly, right now. Then water, out of the room, back to the day. The next hour is still yours, and so is the man you are becoming.</p>' +
       '<div class="stand-foot stand-late" style="animation-delay:1.9s"><button class="btn btn-primary" data-confessed>I have said it to Him</button></div>' +
     "</div>";
   root.querySelector("#stand-close").addEventListener("click", closeStand);
@@ -490,6 +503,6 @@ function renderSlip() {
     create("stands", { date: dayKey(), at: nowIso(), feeling: slip.feeling, action: null, outcome: "slipped" });
     slip = null;
     closeStand();
-    toast("Logged. Get some sleep.");
+    toast("Logged. Back to the day.");
   });
 }

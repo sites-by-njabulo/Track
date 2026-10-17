@@ -102,7 +102,8 @@ async function shoot(browser, theme, width) {
       await page.screenshot({ path: path.join(dir, 'stand-' + step + '.png') });
       await page.evaluate(() => {
         const f = document.querySelector('[data-feeling="habit"]'); if (f) f.click();
-        const a = document.querySelector('[data-action="wave"]'); if (a) a.click();
+        const a = document.querySelector('[data-action="walk"]'); if (a) a.click();
+        if (typeof stand !== 'undefined' && stand && stand.step === 0) { stand.step = 1; renderStandStep(); return; }
         const n = document.querySelector('[data-next]'); if (n) n.click();
       });
     }

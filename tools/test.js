@@ -121,14 +121,16 @@ async function openApp(browser, seed, url) {
       saveWeekPlan('comm_plan', weekdayIndex(t), { rest: false });
       // Stand flow end to end
       openStand();
-      out.standOpens = document.getElementById('stand').classList.contains('open') && !!document.querySelector('.breath');
+      out.standOpens = document.getElementById('stand').classList.contains('open') && !!document.querySelector('.breath') && !document.querySelector('[data-next]');
       const standsBefore = db.stands.length;
       let sawAlly = false, sawPlan = false;
-      for (let i = 0; i < 8; i++) {
+      // the breathing step has no button until its timer ends: jump it
+      stand.step = 1; renderStandStep();
+      for (let i = 0; i < 7; i++) {
         const fb = document.querySelector('[data-feeling="tired"]'); if (fb) fb.click();
         if (document.querySelector('[data-action="ally"]')) sawAlly = true;
         if (document.querySelector('.stand-choice-plan')) sawPlan = true;
-        const ab = document.querySelector('[data-action="phone"]'); if (ab) ab.click();
+        const ab = document.querySelector('[data-action="water"]'); if (ab) ab.click();
         const nb = document.querySelector('[data-next]'); if (nb) nb.click();
       }
       out.standAllyAndPlanOffered = sawAlly && sawPlan;

@@ -107,7 +107,8 @@ Top to bottom, and nothing else:
   trigger comes at night. `js/stand.js` is a full-screen, always-dark flow,
   one thing per screen, rebuilt 2026-10-14 on what holds up in the research
   and in the apps made for this (Fortify, Urge, NoFap.io, QUITTR): three
-  physiological sighs (24s), name the feeling (HALT plus bored, stressed,
+  physiological sighs (24s, not skippable: the Next button only appears when
+  the timer ends), name the feeling (HALT plus bored, stressed,
   "just this hour"; each has a one-line truth), a verse (fourteen, rotating),
   what is on the line (`settings.stand_list`, defaults in the file; the
   "tomorrow's 30 DMs" line was removed on his request because it read as
@@ -116,16 +117,23 @@ Top to bottom, and nothing else:
   (written in the file, never real quotes, never misogyny, always compatible
   with the faith framing), an optional camera step ("Look yourself in the
   eye", front camera, stream stopped on leave), one action with his if-then
-  plan first (`settings.stand_plan`, implementation intentions), a
-  three-minute "ride it out" wave timer that narrates rise, peak and fall, or
-  a one-tap WhatsApp message to an ally (`settings.stand_ally`, digits with
+  plan first (`settings.stand_plan`, implementation intentions). Every action
+  gets him OUT OF THE ROOM, on his instruction 2026-10-17 ("the best way is
+  to flee", 2 Timothy 2:22): leave and walk for three minutes (a wave timer
+  narrates rise, peak and fall), cold water then out, pray out loud
+  somewhere else, or a one-tap WhatsApp message to an ally. Push-ups and
+  "phone in another room then bed" were removed. Nothing in the flow assumes
+  night any more (he fell at 1pm): no "go to sleep", the finish says "Back
+  to the day" (`settings.stand_ally`, digits with
   country code, `stand_ally_name`), a short prayer, then the finish: an SVG
   ring draws itself, "You stood.", the count this month, James 1:12, and
   "phone out of the bedroom". Every completion is a `stands` row (outcome
   "stood"). "I already gave in" is a separate short path built against the
   abstinence violation effect: one lapse is one event, 1 John 1:9, Proverbs
   24:16, one optional "what was going on before" tap, say it to God, get up.
-  Logged as "slipped", shown as "Got back up", never as a streak reset. Stand sits in the phone's bottom bar on purpose: one tap
+  Logged as "slipped", shown as "Got back up", never as a streak reset.
+  Entries on the Stand page can be tapped and removed, for when the flow was
+  completed but the day was lost anyway. Stand sits in the phone's bottom bar on purpose: one tap
   at night. Tone rule: hard and direct, never shaming. God is developing him,
   not punishing him. Do not add tracking beyond the count.
 - **Sidebar is resizable** on the laptop (drag the right edge, double-click
