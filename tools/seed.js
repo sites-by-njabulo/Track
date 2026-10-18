@@ -64,7 +64,7 @@ function buildSeed(opts) {
     const closed = !(i === 1 && opts.gate);
     const dms = i % 5 !== 0;
     days.push(row({
-      date: k, god_first: i % 4 !== 0, dms_done: dms, videos_done: i % 3 !== 0, comm_done: i % 2 === 0,
+      date: k, god_first: i % 4 !== 0, dms_done: dms, fb_done: i % 2 === 0, videos_done: i % 3 !== 0, comm_done: i % 2 === 0,
       exercise: i % 3 === 0, blog_done: i % 2 === 1,
       screen_minutes: closed ? (i % 2 ? 60 : 90) : null,
       checkin_done: closed, checkin_at: closed ? new Date(Date.now() - i * 86400000).toISOString() : null,
@@ -74,7 +74,7 @@ function buildSeed(opts) {
     }, i, stableId('day:' + k)));
   }
   days.push(row({
-    date: t, god_first: true, dms_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
+    date: t, god_first: true, dms_done: false, fb_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
     screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ''
   }, 0, stableId('day:' + t)));
 
@@ -127,7 +127,7 @@ function buildSeed(opts) {
     row({ date: shift(t, -9), at: new Date(Date.now() - 9 * 86400000).toISOString(), feeling: null, action: null, outcome: "slipped" }, 9)
   ];
 
-  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 75, screen_cap: 70, target_blogs: 4, stand_list: '', stand_plan: '', stand_ally: '27821234567', stand_ally_name: 'Sipho' }, 10, stableId('settings'))];
+  const settings = [row({ target_dms: 30, target_videos: 2, target_comm: 60, screen_cap: 70, target_blogs: 4, stand_list: '', stand_plan: '', stand_ally: '27821234567', stand_ally_name: 'Sipho' }, 10, stableId('settings'))];
 
   return {
     track_tasks: tasks, track_days: days, track_goals: goals, track_goal_entries: goal_entries,

@@ -45,6 +45,7 @@ create table if not exists public.days (
   date date,
   god_first boolean not null default false,
   dms_done boolean not null default false,
+  fb_done boolean not null default false,
   videos_done boolean not null default false,
   comm_done boolean not null default false,
   exercise boolean not null default false,
@@ -163,7 +164,7 @@ create table if not exists public.settings (
   id uuid primary key default gen_random_uuid(),
   target_dms integer not null default 30,
   target_videos integer not null default 2,
-  target_comm integer not null default 75,
+  target_comm integer not null default 60,
   screen_cap integer not null default 70,
   target_blogs integer not null default 4,
   stand_list text not null default '',
@@ -177,6 +178,7 @@ create table if not exists public.settings (
 
 
 -- Columns added after the first run. Safe to re-run.
+alter table public.days add column if not exists fb_done boolean not null default false;
 alter table public.settings add column if not exists stand_list text not null default '';
 alter table public.settings add column if not exists stand_plan text not null default '';
 alter table public.settings add column if not exists stand_ally text not null default '';

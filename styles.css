@@ -1061,3 +1061,8 @@ body.stand-open { overflow: hidden; }
 
 .stand-entry { cursor: pointer; }
 .stand-entry:hover { background: var(--surface-2); }
+
+/* Header actions: a column on the phone (primary on top), a row on the laptop. */
+.topbar-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.topbar-icons { display: flex; gap: 6px; }
+@media (min-width: 600px) { .topbar-stack { flex-direction: row-reverse; align-items: center; } }

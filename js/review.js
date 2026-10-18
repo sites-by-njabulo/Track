@@ -6,7 +6,7 @@
 
 let reviewWeek = 0;   // 0 = this week, -1 = last week
 
-const REVIEW_SHORT = { god_first: "God", dms_done: "DMs", videos_done: "Videos", comm_done: "Talk", exercise: "Exercise", blog_done: "Blog" };
+const REVIEW_SHORT = { god_first: "God", dms_done: "DMs", fb_done: "Facebook", videos_done: "Videos", comm_done: "Talk", exercise: "Exercise", blog_done: "Blog" };
 
 const HOLD_FIELDS = [
   { key: "item",  label: "What",  type: "text", required: true, autofocus: true, placeholder: "MacBook Air" },
@@ -55,7 +55,7 @@ function renderReview() {
         const today = d.key === t;
         return '<tr class="' + (future ? "row-future" : "") + (today ? " row-today" : "") + '">' +
           "<td><strong>" + escapeHtml(formatWeekday(d.key)) + "</strong>" + (today ? '<span class="cell-sub">today</span>' : "") + "</td>" +
-          (future ? '<td colspan="8"></td>' :
+          (future ? '<td colspan="9"></td>' :
             d.checks.map(function (on) { return '<td class="tick-cell">' + (on ? '<span class="tick on">' + ICONS.check + "</span>" : '<span class="tick"></span>') + "</td>"; }).join("") +
             '<td class="num' + (d.screen !== null && d.screen !== undefined && num(d.screen) > num(S().screen_cap) ? " cell-overdue" : "") + '">' +
               (d.screen === null || d.screen === undefined ? "" : minutesLabel(d.screen)) + "</td>" +

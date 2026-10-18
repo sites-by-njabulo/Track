@@ -94,6 +94,12 @@ function minutesLabel(m) {
   const h = Math.floor(m / 60), r = m % 60;
   return r ? h + "h " + r + "m" : h + "h";
 }
+// "1 hour", "2 hours", "45 min", "1h 15m": for the to-do list wording.
+function hoursLabel(m) {
+  m = Math.round(num(m));
+  if (m > 0 && m % 60 === 0) return plural(m / 60, "hour");
+  return minutesLabel(m);
+}
 function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
 
 

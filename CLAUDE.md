@@ -46,7 +46,9 @@ He sent a Todoist screenshot as the reference. Match it, not the CRM or MyDay:
 
 ## Today (`js/today.js`)
 
-Top to bottom, and nothing else:
+Top to bottom, and nothing else (the Content and Goals sections were removed
+2026-10-18 on his request: the countdown strip already shows the goal, and
+the Content page has the plan):
 
 1. **Greeting** as the page title, like Claude's "Njabulo returns!" which he
    likes. `GREETINGS` in `js/config.js` has five lines per time bucket
@@ -58,20 +60,18 @@ Top to bottom, and nothing else:
 3. **Countdown strip**: days left for the primary goal (the money goal with a
    deadline, else the nearest deadline, else end of month), its amount if it
    is money, and the verse of the day.
-4. **Today's to-do list**: the six fixed checks from `DAILY_CHECKS`
+4. **Today's to-do list**: the seven fixed checks from `DAILY_CHECKS`
    (`js/config.js`), each a boolean on the day row (`god_first`, `dms_done`,
-   `videos_done`, `comm_done`, `exercise`, `blog_done`), followed by the
+   `fb_done` for Facebook outreach, `videos_done`, `comm_done` at one hour,
+   `exercise`, `blog_done`), followed by the
    tasks due today or overdue, then "+ Add task". The exercise row shows the
    day's workout from the Exercise plan with its guide video link; the
    communication row shows the day's focus from the Communication plan. A
    rest day on either plan counts as done without a tick.
-5. **Content**: what today is for, from the Content plan ("Film and Post
-   day", the day's note, and the next content day), plus the two links to
-   his Google Sheet and Docs (`CONTENT_LINKS`). The scripts live there, not
-   in the app.
-6. **Goals**: title, days left, "$1,700 of $5,000, $3,300 to go" and the
-   percentage with a bar. Tap goes to the Goals page. "+ Log what came in"
-   adds an entry to the primary goal.
+
+That is the whole page. The header's Calendar and Hold icons sit under the
+Close button on the phone (`.topbar-stack`), and the Content page stacks its
+two link buttons the same way, Docs first.
 
 ## The behaviour rules
 
@@ -132,8 +132,8 @@ Top to bottom, and nothing else:
   abstinence violation effect: one lapse is one event, 1 John 1:9, Proverbs
   24:16, one optional "what was going on before" tap, say it to God, get up.
   Logged as "slipped", shown as "Got back up", never as a streak reset.
-  Entries on the Stand page can be tapped and removed, for when the flow was
-  completed but the day was lost anyway. Stand sits in the phone's bottom bar on purpose: one tap
+  The Stand page shows no history at all, on his request ("remove all the
+  past history"); stands are still logged for the one line on Review. Stand sits in the phone's bottom bar on purpose: one tap
   at night. Tone rule: hard and direct, never shaming. God is developing him,
   not punishing him. Do not add tracking beyond the count.
 - **Sidebar is resizable** on the laptop (drag the right edge, double-click

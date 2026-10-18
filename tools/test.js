@@ -84,7 +84,7 @@ async function openApp(browser, seed, url) {
       plan: planToday(), comm: commPlanToday(), cplan: contentPlanFor(weekdayIndex(dayKey())),
       nextDay: nextContentDay(), skip: skipReasonBreakdown(30), due: tasksDueOn(dayKey()).length, sync: syncLabel().label, configured: supabaseConfigured()
     }));
-    check('six daily checks', r2.checks.length === 6, r2.checks.map((c) => c.label));
+    check('seven daily checks, communication says one hour', r2.checks.length === 7 && r2.checks.some((c) => c.label === 'Communication practice, 1 hour') && r2.checks.some((c) => c.label === 'Facebook outreach'), r2.checks.map((c) => c.label));
     check('streak = 29', r2.streak === 29, r2.streak);
     check('no gate when yesterday closed', r2.gate === null);
     check('primary goal is the money goal', r2.goal && r2.goal.amount === 5000, r2.goal && r2.goal.title);
@@ -204,7 +204,7 @@ async function openApp(browser, seed, url) {
       return out;
     });
     check('fresh install has no gate', r5.gate === null);
-    check('fresh install defaults', r5.streak === 0 && r5.checks === 6 && r5.pin === true, r5);
+    check('fresh install defaults', r5.streak === 0 && r5.checks === 7 && r5.pin === true, r5);
     check('fresh install seeds the $5,000 goal once', r5.goal && r5.goal.amount === 5000 && /5,000/.test(r5.goal.title), r5.goal);
     check('all nine pages render empty', r5.pages.every(Boolean), r5.pages);
     check('no page errors on fresh install', errors.length === 0, errors);

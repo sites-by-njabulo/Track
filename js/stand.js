@@ -139,14 +139,10 @@ function formatTime(iso) {
 /* ---------- The page ---------- */
 
 function renderStand() {
-  const month = standsThisMonth();
-  const stood = standCount(month, "stood");
-  const slipped = standCount(month, "slipped");
-  const recent = db.stands.slice().sort(function (a, b) { return (a.at || "") < (b.at || "") ? 1 : -1; }).slice(0, 7);
   const ally = standAlly();
 
   const html =
-    pageHeader("Stand", stood ? '<span class="sub-check">' + ICONS.check + "</span>" + plural(stood, "time") + " stood this month" : "Stand firm in the faith. 1 Corinthians 16:13") +
+    pageHeader("Stand", "Stand firm in the faith. 1 Corinthians 16:13") +
     '<div class="col">' +
       '<section class="stand-hero">' +
         '<p class="stand-hero-text">When the urge hits, open this. Do not think, do not argue with it, just press the button and follow the screens. About four minutes, any time of day. The urge itself only lasts a few more than that if you do not feed it.</p>' +
@@ -158,15 +154,6 @@ function renderStand() {
         '<p class="panel-note">Decided in daylight so there is nothing to decide at night. ' +
           (ally ? "Your ally is " + escapeHtml(ally.name) + ", one tap away inside the flow." : "Add an ally in Settings: a number on WhatsApp you can message in one tap from inside the flow.") + "</p>" +
       "</section>" +
-      (recent.length
-        ? '<section class="panel"><div class="panel-head"><h2>This month</h2><span class="panel-meta">' + stood + " stood" + (slipped ? ", " + slipped + " got back up" : "") + "</span></div>" +
-            '<ul class="mini-list">' + recent.map(function (s) {
-              return '<li class="stand-entry" data-entry="' + s.id + '" tabindex="0" title="Tap to remove"><span>' + escapeHtml(formatWeekday(s.date) + " " + formatShortDate(s.date)) + (s.at ? ", " + escapeHtml(formatTime(s.at)) : "") +
-                (s.feeling ? '<span class="cell-sub">' + escapeHtml(lookup(STAND_FEELINGS, s.feeling).label) + "</span>" : "") + "</span>" +
-                (s.outcome === "stood" ? '<span class="pill tone-good">Stood</span>' : '<span class="pill tone-muted">Got back up</span>') + "</li>";
-            }).join("") + "</ul>" +
-            '<p class="panel-note">Tap an entry to remove it, if it was logged by mistake.</p></section>'
-        : "") +
     "</div>";
 
   document.getElementById("page-stand").innerHTML = html;
@@ -174,16 +161,6 @@ function renderStand() {
   document.getElementById("stand-slip").addEventListener("click", function () { openSlip(); });
   document.querySelectorAll("#page-stand [data-goto]").forEach(function (b) {
     b.addEventListener("click", function () { showSection(b.dataset.goto); });
-  });
-  document.querySelectorAll("#page-stand [data-entry]").forEach(function (li) {
-    const del = function () {
-      confirmDialog("Remove this entry? Only do this if it was logged by mistake.", "Remove", function () {
-        remove("stands", li.dataset.entry);
-        renderStand();
-      }, true);
-    };
-    li.addEventListener("click", del);
-    li.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); del(); } });
   });
 }
 

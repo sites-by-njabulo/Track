@@ -40,8 +40,9 @@ let sb = null;
 const DAILY_CHECKS = [
   { key: "god_first",   icon: "book",     label: function () { return "Time with God before the phone"; } },
   { key: "dms_done",    icon: "message",  label: function (s) { return "Send " + s.target_dms + " cold DMs"; } },
+  { key: "fb_done",     icon: "message",  label: function () { return "Facebook outreach"; } },
   { key: "videos_done", icon: "video",    label: function (s) { return "Post " + plural(s.target_videos, "video"); } },
-  { key: "comm_done",   icon: "mic",      label: function (s) { return "Communication practice, " + minutesLabel(s.target_comm); } },
+  { key: "comm_done",   icon: "mic",      label: function (s) { return "Communication practice, " + hoursLabel(s.target_comm); } },
   { key: "exercise",    icon: "exercise", label: function () { return "Exercise"; } },
   { key: "blog_done",   icon: "book",     label: function () { return "Publish a blog post"; } }
 ];
@@ -60,8 +61,8 @@ const CONTENT_ACTS = [
 
 // Where the scripts and the content sheet actually live.
 const CONTENT_LINKS = [
-  { label: "Content sheet", url: "https://docs.google.com/spreadsheets/d/1K3hyFoq5bYq-LlL4tHGzHhz_mVpqzUWy6hBz6wiW6RI/edit?gid=0#gid=0", icon: "review" },
-  { label: "Scripts in Docs", url: "https://docs.google.com/document/u/2/", icon: "book" }
+  { label: "Scripts in Docs", url: "https://docs.google.com/document/u/2/", icon: "book" },
+  { label: "Content sheet", url: "https://docs.google.com/spreadsheets/d/1K3hyFoq5bYq-LlL4tHGzHhz_mVpqzUWy6hBz6wiW6RI/edit?gid=0#gid=0", icon: "review" }
 ];
 
 // The goal that is created on first open, so the countdown has something to
@@ -88,7 +89,7 @@ const CALENDAR_URL = "https://calendar.google.com/calendar/u/2/r";
 const SETTINGS_DEFAULTS = {
   target_dms: 30,
   target_videos: 2,
-  target_comm: 75,
+  target_comm: 60,
   screen_cap: 70,      // Instagram only, not the whole phone: an hour of DMs and posting plus ten
   target_blogs: 4,
   stand_list: "",       // what is on the line, one per line; empty = the defaults in js/stand.js

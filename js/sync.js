@@ -15,7 +15,7 @@
 const TABLES = {
   tasks: () => ({ title: "", notes: "", due: null, area: "", done: false, done_date: null }),
   days: () => ({
-    date: null, god_first: false, dms_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
+    date: null, god_first: false, dms_done: false, fb_done: false, videos_done: false, comm_done: false, exercise: false, blog_done: false,
     screen_minutes: null, checkin_done: false, checkin_at: null, dm_skip_reason: null, better: null, journal: ""
   }),
   goals: () => ({ title: "", amount: 0, deadline: null, done: false, sort: 0 }),

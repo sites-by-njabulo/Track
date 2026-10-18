@@ -22,9 +22,9 @@ function renderContent() {
       ? acts.map(function (a) { return a.label; }).join(" and ") + " day today."
       : "Nothing today." + (nextDay ? " Next content day is " + WEEKDAYS[nextDay.weekday] + "." : "");
 
-  const actions = CONTENT_LINKS.map(function (l) {
+  const actions = '<div class="topbar-stack">' + CONTENT_LINKS.map(function (l) {
     return '<a class="btn btn-ghost btn-sm" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + ICONS[l.icon] + "<span>" + escapeHtml(l.label) + "</span></a>";
-  }).join("");
+  }).join("") + "</div>";
 
   const html =
     pageHeader("Content", sub, actions) +
