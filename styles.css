@@ -1066,3 +1066,7 @@ body.stand-open { overflow: hidden; }
 .topbar-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .topbar-icons { display: flex; gap: 6px; }
 @media (min-width: 600px) { .topbar-stack { flex-direction: row-reverse; align-items: center; } }
+
+.week-strip .plan-row { min-height: 38px; padding: 3px 0; }
+.week-strip .plan-day { width: 64px; }
+.panel-meta .doc-link + .doc-link { margin-left: 10px; }

@@ -76,6 +76,16 @@ function renderToday() {
       '<button class="add-row add-task-row" id="today-add-task">' + ICONS.plus + "<span>Add task</span></button>" +
     "</section>" +
 
+    // Content: the whole week at a glance, so the plan is in front of him and
+    // there is nothing to go looking for. (His words: he catches himself
+    // hunting for viral formats when the week is already planned.)
+    '<section class="panel">' +
+      '<div class="panel-head"><h2>Content this week</h2><span class="panel-meta">' +
+        CONTENT_LINKS.map(function (l) { return '<a class="doc-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + " " + ICONS.external + "</a>"; }).join("") +
+      "</span></div>" +
+      contentWeekHtml(weekdayIndex(t)) +
+    "</section>" +
+
     "</div>";
 
   document.getElementById("page-today").innerHTML = html;
@@ -90,6 +100,25 @@ function greeting(gate, hour) {
   const list = GREETINGS[bucket];
   const d = parseKey(dayKey());
   return list[(d.getDate() + d.getMonth()) % list.length].replace("{n}", USER_NAME);
+}
+
+function contentWeekHtml(todayIdx) {
+  if (!contentPlanSet()) {
+    return '<p class="panel-empty-text">Set your scripting, filming, editing and posting days on the Content page and the week shows here.</p>';
+  }
+  return '<ul class="plan-list compact week-strip">' + WEEKDAYS.map(function (name, i) {
+    const p = contentPlanFor(i);
+    const acts = planActs(p);
+    const isToday = i === todayIdx;
+    return '<li class="plan-row' + (isToday ? " today" : "") + (acts.length ? "" : " rest") + '" data-goto="content" tabindex="0">' +
+      '<span class="plan-day">' + name.slice(0, 3) + (isToday ? '<span class="plan-today">Today</span>' : "") + "</span>" +
+      '<span class="plan-label">' + (acts.length
+        ? acts.map(function (a) { return '<span class="act-chip">' + a.label + "</span>"; }).join("")
+        : "Off") +
+        (p.notes && isToday ? '<span class="plan-notes">' + escapeHtml(p.notes) + "</span>" : "") + "</span>" +
+    "</li>";
+  }).join("") + "</ul>" +
+  '<p class="panel-note">The week is already planned. Nothing to go looking for.</p>';
 }
 
 function checkRow(c, plan) {
@@ -141,5 +170,12 @@ function wireToday() {
   });
 
   wireTaskRows(page, renderToday);
+
+  page.querySelectorAll("[data-goto]").forEach(function (el) {
+    el.addEventListener("click", function () { showSection(el.dataset.goto); });
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showSection(el.dataset.goto); }
+    });
+  });
 
 }

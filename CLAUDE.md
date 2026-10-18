@@ -69,6 +69,12 @@ the Content page has the plan):
    communication row shows the day's focus from the Communication plan. A
    rest day on either plan counts as done without a tick.
 
+5. **Content this week**: the seven weekdays as a compact strip with each
+   day's Script/Film/Edit/Post chips, today highlighted, tap goes to the
+   Content page, plus the Docs and Sheet links. Put back 2026-10-18 as an
+   overview (not the old next-action card) because he catches himself
+   hunting for "viral formats" when the week is already planned.
+
 That is the whole page. The header's Calendar and Hold icons sit under the
 Close button on the phone (`.topbar-stack`), and the Content page stacks its
 two link buttons the same way, Docs first.
