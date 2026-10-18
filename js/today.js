@@ -80,7 +80,7 @@ function renderToday() {
     // there is nothing to go looking for. (His words: he catches himself
     // hunting for viral formats when the week is already planned.)
     '<section class="panel">' +
-      '<div class="panel-head"><h2>Content this week</h2><span class="panel-meta">' +
+      '<div class="panel-head"><h2>' + (planningNextWeek() ? "Content next week" : "Content this week") + '</h2><span class="panel-meta">' +
         CONTENT_LINKS.map(function (l) { return '<a class="doc-link" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.label) + " " + ICONS.external + "</a>"; }).join("") +
       "</span></div>" +
       contentWeekHtml(weekdayIndex(t)) +
@@ -103,6 +103,8 @@ function greeting(gate, hour) {
 }
 
 function contentWeekHtml(todayIdx) {
+  const next = planningNextWeek();
+  if (next) todayIdx = -1;
   if (!contentPlanSet()) {
     return '<p class="panel-empty-text">Set your scripting, filming, editing and posting days on the Content page and the week shows here.</p>';
   }
@@ -118,7 +120,7 @@ function contentWeekHtml(todayIdx) {
         (p.notes && isToday ? '<span class="plan-notes">' + escapeHtml(p.notes) + "</span>" : "") + "</span>" +
     "</li>";
   }).join("") + "</ul>" +
-  '<p class="panel-note">The week is already planned. Nothing to go looking for.</p>';
+  '<p class="panel-note">' + (next ? "Sunday after four: next week is on the board. Change any day on the Content page." : "The week is already planned. Nothing to go looking for.") + "</p>";
 }
 
 function checkRow(c, plan) {

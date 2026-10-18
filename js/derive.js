@@ -231,6 +231,19 @@ function commPlanToday() { return weekPlanFor("comm_plan", weekdayIndex(dayKey()
 function contentPlanFor(weekday) { return weekPlanFor("content_plan", weekday); }
 function saveContentPlan(weekday, fields) { return saveWeekPlan("content_plan", weekday, fields); }
 function planActs(p) { return CONTENT_ACTS.filter(function (a) { return !!p[a.key]; }); }
+// From Sunday 16:00 the week on the board is next week: no "today" marker,
+// the strip reads as a plan, not a report. He plans the week on Sunday
+// afternoon and the old framing made it feel locked until midnight.
+function planningNextWeek() {
+  const now = new Date();
+  return weekdayIndex(dayKey()) === 6 && now.getHours() >= 16;
+}
+function clearContentWeek() {
+  for (let w = 0; w < 7; w++) {
+    const row = byId("content_plan", weekPlanId("content_plan", w));
+    if (row) update("content_plan", row.id, { do_script: false, do_film: false, do_edit: false, do_post: false, notes: "" });
+  }
+}
 function contentPlanSet() { return db.content_plan.some(function (p) { return planActs(p).length; }); }
 // Next weekday (after today) with content work, or null.
 function nextContentDay() {

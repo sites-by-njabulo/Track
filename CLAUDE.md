@@ -69,7 +69,8 @@ the Content page has the plan):
    communication row shows the day's focus from the Communication plan. A
    rest day on either plan counts as done without a tick.
 
-5. **Content this week**: the seven weekdays as a compact strip with each
+5. **Content this week** (or "next week" from Sunday 16:00, when the today
+   marker drops and the strip reads as a plan; `planningNextWeek()`): the seven weekdays as a compact strip with each
    day's Script/Film/Edit/Post chips, today highlighted, tap goes to the
    Content page, plus the Docs and Sheet links. Put back 2026-10-18 as an
    overview (not the old next-action card) because he catches himself
@@ -94,7 +95,8 @@ two link buttons the same way, Docs first.
 - **Content is days, not scripts.** He manages scripts in Google Sheets and
   Docs. The Content page is only: which weekdays are scripting, filming,
   editing and posting days (`content_plan`, four booleans and a note per
-  weekday, tap to edit) and the two links. A "This week by format" section
+  weekday, tap to edit; the plan repeats weekly) and the two links. "Clear
+  the week" wipes all seven days after a confirm. A "This week by format" section
   with next-step buttons was built and removed ("I don't really understand
   it"); so was a blog "Published" button he pressed by mistake. No quick
   action buttons on this page.

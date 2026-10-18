@@ -109,6 +109,10 @@ async function openApp(browser, seed, url) {
       out.commSaved = weekPlanFor('comm_plan', 6).label === 'Volume';
       saveContentPlan(5, { do_film: true });
       out.cplanSaved = contentPlanFor(5).do_film === true && daysWith('do_film').indexOf('Sat') !== -1;
+      out.nextWeekFlag = typeof planningNextWeek() === 'boolean';
+      clearContentWeek();
+      out.weekCleared = !contentPlanSet();
+      saveContentPlan(0, { do_film: true, do_post: true });
       const g = primaryGoal();
       const before = goalCurrent(g);
       const e = create('goal_entries', { goal_id: g.id, amount: 800, note: 'Test', date: t });

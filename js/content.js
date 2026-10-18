@@ -16,9 +16,12 @@ function renderContent() {
   const acts = planActs(today);
   const nextDay = nextContentDay();
 
+  const next = planningNextWeek();
   const sub = !contentPlanSet()
     ? "Tap a day to set what happens on it."
-    : acts.length
+    : next
+      ? "Planning next week. Tap a day to set it."
+      : acts.length
       ? acts.map(function (a) { return a.label; }).join(" and ") + " day today."
       : "Nothing today." + (nextDay ? " Next content day is " + WEEKDAYS[nextDay.weekday] + "." : "");
 
@@ -29,10 +32,11 @@ function renderContent() {
   const html =
     pageHeader("Content", sub, actions) +
     '<div class="col">' +
+    '<div class="panel-head"><h2>' + (next ? "Next week" : "This week") + '</h2><button class="link-btn" id="content-clear">Clear the week</button></div>' +
     '<ul class="plan-list">' + WEEKDAYS.map(function (name, i) {
       const p = contentPlanFor(i);
       const a = planActs(p);
-      const isToday = i === todayIdx;
+      const isToday = !next && i === todayIdx;
       return '<li class="plan-row' + (isToday ? " today" : "") + (a.length ? "" : " rest") + '" data-cday="' + i + '" tabindex="0">' +
         '<span class="plan-day">' + name + (isToday ? '<span class="plan-today">Today</span>' : "") + "</span>" +
         '<span class="plan-label">' + (a.length
@@ -67,6 +71,13 @@ function openContentPlanForm(weekday) {
 
 function wireContent() {
   const page = document.getElementById("page-content");
+  page.querySelector("#content-clear").addEventListener("click", function () {
+    confirmDialog("Clear every day? You will plan the week from scratch.", "Clear", function () {
+      clearContentWeek();
+      renderContent();
+      toast("Cleared. Tap a day to set it.");
+    }, true);
+  });
   page.querySelectorAll("[data-cday]").forEach(function (li) {
     li.addEventListener("click", function () { openContentPlanForm(Number(li.dataset.cday)); });
     li.addEventListener("keydown", function (e) {
